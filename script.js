@@ -21,7 +21,6 @@ function toast(msg) {
     setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ===== Supabase 数据操作 =====
 // ===== 字段名映射（Supabase返回小写）=====
 function normalizeRecord(r) {
     return {
@@ -39,6 +38,7 @@ function normalizeRecord(r) {
     };
 }
 
+// ===== Supabase 数据操作 =====
 async function loadFromCloud() {
     try {
         const { data, error } = await supabase
@@ -63,7 +63,6 @@ async function loadFromCloud() {
 
 async function saveToCloud(item) {
     try {
-        // 转换为 Supabase 的小写字段名
         const cloudItem = {
             id: item.id,
             sport: item.sport,
