@@ -156,10 +156,21 @@ function isMatchStarted(dateStr) {
     return md <= today;
 }
 
+function formatDateTime(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hour = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${year}年${month}月${day}日 ${hour}:${min}`;
+}
+
 function createRecHTML(a, pending) {
     const t = TYPE_MAP[a.betType] || { label: a.betType, cls: '' };
     const icon = SPORT_MAP[a.sport] || '📋';
-    const date = a.date ? new Date(a.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '';
+    const dateTime = a.date ? formatDateTime(a.date) : '';
     const started = isMatchStarted(a.date);
     const canOp = isUnlocked && started;
     
@@ -179,7 +190,7 @@ function createRecHTML(a, pending) {
                 <div class="rec-match">${icon} ${a.match || '未命名'}</div>
                 <div class="rec-meta">
                     <span class="rec-tag ${t.cls}">${t.label}</span>
-                    <span class="rec-date">${a.league} · ${date}</span>
+                    <span class="rec-date">${a.league} · ${dateTime}</span>
                     ${pending && !started ? '<span class="rec-tag o">未开赛</span>' : ''}
                 </div>
             </div>
@@ -223,9 +234,18 @@ function renderRecords() {
 }
 
 function bindRecEvents() {
-    document.querySelectorAll('.rec-btn.settle:not(.locked)').forEach(btn => {
+    document.querySelectorAll('.rec-btn.settle').forEach(btn => {
         btn.onclick = () => {
             const id = parseInt(btn.dataset.id);
+            if (btn.classList.contains('locked')) {
+                if (!isUnlocked) {
+                    toast('请先解锁');
+                    openPwdModal();
+                } else {
+                    toast('比赛尚未开始');
+                }
+                return;
+            }
             const d = getData();
             const a = d.analyses.find(x => x.id === id);
             if (!isMatchStarted(a.date)) {
@@ -236,19 +256,15 @@ function bindRecEvents() {
         };
     });
     
-    document.querySelectorAll('.rec-btn.settle.locked').forEach(btn => {
+    document.querySelectorAll('.rec-btn.delete').forEach(btn => {
         btn.onclick = () => {
-            if (!isUnlocked) {
-                toast('请先解锁');
-                openPwdModal();
-            } else {
-                toast('比赛尚未开始');
+            if (btn.classList.contains('locked')) {
+                if (!isUnlocked) {
+                    toast('请先解锁');
+                    openPwdModal();
+                }
+                return;
             }
-        };
-    });
-    
-    document.querySelectorAll('.rec-btn.delete:not(.locked)').forEach(btn => {
-        btn.onclick = () => {
             if (confirm('确定删除？')) {
                 const id = parseInt(btn.dataset.id);
                 const d = getData();
@@ -257,15 +273,6 @@ function bindRecEvents() {
                 renderRecords();
                 updateStats();
                 toast('已删除');
-            }
-        };
-    });
-    
-    document.querySelectorAll('.rec-btn.delete.locked').forEach(btn => {
-        btn.onclick = () => {
-            if (!isUnlocked) {
-                toast('请先解锁');
-                openPwdModal();
             }
         };
     });
@@ -325,6 +332,7 @@ function doSettle() {
 // ===== 表单 =====
 function initForm() {
     document.getElementById('matchDate').valueAsDate = new Date();
+    document.getElementById('matchTime').value = '00:00';
     
     document.getElementById('analysisForm').onsubmit = e => {
         e.preventDefault();
@@ -337,6 +345,7 @@ function initForm() {
         
         const league = document.getElementById('league').value.trim();
         const date = document.getElementById('matchDate').value;
+        const time = document.getElementById('matchTime').value;
         const match = document.getElementById('matchTeams').value.trim();
         const betType = document.getElementById('betType').value;
         const rec = document.getElementById('recommendation').value.trim();
@@ -348,6 +357,9 @@ function initForm() {
             return;
         }
         
+        // 组合日期和时间
+        const dateTime = `${date}T${time || '00:00'}:00`;
+        
         // 根据类型自动设置运动类型
         let sport = 'football';
         if (['overunder', 'handicap'].includes(betType)) sport = 'basketball';
@@ -357,7 +369,7 @@ function initForm() {
             id: Date.now(),
             sport,
             league,
-            date,
+            date: dateTime,
             match,
             betType,
             recommendation: rec,
@@ -370,6 +382,7 @@ function initForm() {
         
         document.getElementById('analysisForm').reset();
         document.getElementById('matchDate').valueAsDate = new Date();
+        document.getElementById('matchTime').value = '00:00';
         
         renderRecords();
         updateStats();
