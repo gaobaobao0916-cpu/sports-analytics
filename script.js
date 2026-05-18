@@ -1,7 +1,9 @@
 // ===== Supabase 配置 =====
+import { createClient } from '@supabase/supabase-js';
+
 const SUPABASE_URL = 'https://zvrmynxrbfsnejvsxohh.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_JnsPJ6L9etq6QpQW4ih5Gw_5ksDu4y8';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ===== 应用配置 =====
 const PASSWORD = '@@bao657564332';

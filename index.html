@@ -9,6 +9,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=5">
+
+    <!-- Supabase ES Module Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+        }
+    }
+    </script>
 </head>
 <body>
     <!-- 顶部导航 -->
@@ -246,8 +255,7 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="script.js?v=6"></script>
+    <!-- 应用逻辑 (ES Module) -->
+    <script type="module" src="script.js?v=7"></script>
 </body>
 </html>
