@@ -1,6 +1,9 @@
-// ===== 数据存储 =====
+// ===== 配置 =====
+const PASSWORD = '@@bao657564332';
 const STORAGE_KEY = 'sports_analytics_v1';
+const LOCK_KEY = 'sports_analytics_unlocked';
 
+// ===== 数据存储 =====
 function getData() {
     try {
         const data = localStorage.getItem(STORAGE_KEY);
@@ -16,16 +19,49 @@ function saveData(data) {
 
 // ===== 类型映射 =====
 const TYPE_MAP = {
-    asia: { label: '亚盘推荐', class: 'asia' },
-    lottery: { label: '竞彩推荐', class: 'lottery' },
-    overunder: { label: '大小分推荐', class: 'overunder' },
-    handicap: { label: '让球推荐', class: 'handicap' }
+    asia: { label: '亚盘', class: 'asia' },
+    lottery: { label: '竞彩', class: 'lottery' },
+    overunder: { label: '大小分', class: 'overunder' },
+    handicap: { label: '让球', class: 'handicap' }
 };
 
 const SPORT_MAP = {
     football: '⚽',
     basketball: '🏀'
 };
+
+// ===== 密码锁 =====
+function checkLock() {
+    const unlocked = sessionStorage.getItem(LOCK_KEY) === 'true';
+    if (unlocked) {
+        document.getElementById('lockOverlay').classList.add('hidden');
+        document.getElementById('loginBar').style.display = 'flex';
+    }
+}
+
+function attemptUnlock() {
+    const input = document.getElementById('lockPassword');
+    const error = document.getElementById('lockError');
+    const password = input.value;
+
+    if (password === PASSWORD) {
+        sessionStorage.setItem(LOCK_KEY, 'true');
+        document.getElementById('lockOverlay').classList.add('hidden');
+        document.getElementById('loginBar').style.display = 'flex';
+        error.textContent = '';
+        input.value = '';
+    } else {
+        error.textContent = '密码错误，请重试';
+        input.value = '';
+        input.focus();
+    }
+}
+
+function logout() {
+    sessionStorage.removeItem(LOCK_KEY);
+    document.getElementById('lockOverlay').classList.remove('hidden');
+    document.getElementById('loginBar').style.display = 'none';
+}
 
 // ===== Toast =====
 function showToast(message) {
@@ -35,15 +71,14 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
-// ===== 背景粒子动画 =====
+// ===== 背景粒子 =====
 (function initParticles() {
     const canvas = document.getElementById('bgCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-
     let particles = [];
-    const PARTICLE_COUNT = 60;
-    const CONNECTION_DIST = 120;
+    const PARTICLE_COUNT = 50;
+    const CONNECTION_DIST = 110;
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -51,20 +86,17 @@ function showToast(message) {
     }
 
     class Particle {
-        constructor() {
-            this.reset();
-        }
+        constructor() { this.reset(); }
         reset() {
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * canvas.height;
             this.vx = (Math.random() - 0.5) * 0.4;
             this.vy = (Math.random() - 0.5) * 0.4;
-            this.radius = Math.random() * 1.5 + 0.5;
-            this.opacity = Math.random() * 0.3 + 0.1;
+            this.radius = Math.random() * 1.2 + 0.4;
+            this.opacity = Math.random() * 0.25 + 0.08;
         }
         update() {
-            this.x += this.vx;
-            this.y += this.vy;
+            this.x += this.vx; this.y += this.vy;
             if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
             if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
         }
@@ -76,14 +108,6 @@ function showToast(message) {
         }
     }
 
-    function init() {
-        resize();
-        particles = [];
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            particles.push(new Particle());
-        }
-    }
-
     function drawConnections() {
         for (let i = 0; i < particles.length; i++) {
             for (let j = i + 1; j < particles.length; j++) {
@@ -91,7 +115,7 @@ function showToast(message) {
                 const dy = particles[i].y - particles[j].y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < CONNECTION_DIST) {
-                    const opacity = (1 - dist / CONNECTION_DIST) * 0.08;
+                    const opacity = (1 - dist / CONNECTION_DIST) * 0.06;
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
@@ -101,6 +125,12 @@ function showToast(message) {
                 }
             }
         }
+    }
+
+    function init() {
+        resize();
+        particles = [];
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
     }
 
     function animate() {
@@ -125,7 +155,6 @@ function calculateStats() {
     const winCount = wins.length;
     const rate = total > 0 ? Math.round((winCount / total) * 100) : 0;
 
-    // 连红计算
     let streak = 0;
     const sorted = [...finished].sort((a, b) => b.id - a.id);
     for (const a of sorted) {
@@ -133,7 +162,6 @@ function calculateStats() {
         else break;
     }
 
-    // 分类统计
     function catRate(sport, type) {
         const items = finished.filter(a => a.sport === sport && a.betType === type);
         if (items.length === 0) return '--';
@@ -153,27 +181,21 @@ function calculateStats() {
 function updateStats() {
     const s = calculateStats();
 
-    // 数字动画
     animateNumber('totalCount', s.total);
     animateNumber('winCount', s.winCount);
     animateNumber('streakCount', s.streak);
 
-    // 胜率
-    const rateEl = document.getElementById('winRate');
-    rateEl.textContent = s.rate + '%';
+    document.getElementById('winRate').textContent = s.rate + '%';
     document.getElementById('rateText').textContent = s.rate + '%';
 
-    // 环形进度
     const circle = document.getElementById('rateCircle');
-    const circumference = 2 * Math.PI * 50; // ~314
+    const circumference = 2 * Math.PI * 50;
     const offset = circumference - (s.rate / 100) * circumference;
     circle.style.strokeDashoffset = offset;
 
-    // 进度条
     document.getElementById('totalBar').style.width = '100%';
     document.getElementById('winBar').style.width = s.total > 0 ? ((s.winCount / s.total) * 100) + '%' : '0%';
 
-    // 分类
     document.getElementById('fbAsiaRate').textContent = s.fbAsiaRate;
     document.getElementById('fbLotteryRate').textContent = s.fbLotteryRate;
     document.getElementById('bkOuRate').textContent = s.bkOuRate;
@@ -184,7 +206,7 @@ function animateNumber(id, target) {
     const el = document.getElementById(id);
     const start = parseInt(el.textContent) || 0;
     if (start === target) return;
-    const duration = 800;
+    const duration = 600;
     const startTime = performance.now();
 
     function step(now) {
@@ -207,10 +229,10 @@ function renderRecords() {
     const pending = analyses.filter(a => a.result === null || a.result === undefined);
     const finished = analyses.filter(a => a.result !== null && a.result !== undefined);
 
-    const pendingList = document.getElementById('pendingList');
-    const finishedList = document.getElementById('finishedList');
+    // 更新计数
+    document.getElementById('pendingCount').textContent = pending.length;
+    document.getElementById('finishedCount').textContent = finished.length;
 
-    // 筛选
     function filterList(list) {
         if (currentFilter === 'all') return list;
         if (currentFilter === 'pending') return list.filter(a => a.result === null || a.result === undefined);
@@ -222,13 +244,16 @@ function renderRecords() {
     const filteredPending = filterList(pending);
     const filteredFinished = filterList(finished);
 
+    const pendingList = document.getElementById('pendingList');
+    const finishedList = document.getElementById('finishedList');
+
     pendingList.innerHTML = filteredPending.length
         ? filteredPending.map(a => createRecordHTML(a, true)).join('')
-        : createEmptyHTML('pending');
+        : '<div class="empty-state small"><p>暂无待结算记录</p></div>';
 
     finishedList.innerHTML = filteredFinished.length
         ? filteredFinished.map(a => createRecordHTML(a, false)).join('')
-        : createEmptyHTML('finished');
+        : '<div class="empty-state small"><p>暂无已结算记录</p></div>';
 
     // 绑定事件
     document.querySelectorAll('.settle-btn').forEach(btn => {
@@ -242,25 +267,23 @@ function renderRecords() {
 function createRecordHTML(a, isPending) {
     const typeInfo = TYPE_MAP[a.betType] || { label: a.betType, class: '' };
     const sportIcon = SPORT_MAP[a.sport] || '📋';
-    const dateStr = a.date ? new Date(a.date).toLocaleDateString('zh-CN') : '';
+    const sportLabel = a.sport === 'football' ? '足球' : '篮球';
+    const dateStr = a.date ? new Date(a.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '';
 
     let resultHTML = '';
     if (!isPending && a.result) {
-        const badgeClass = a.result;
-        const badgeText = a.result === 'win' ? '命中' : a.result === 'lose' ? '未命中' : '走水';
+        const badgeText = a.result === 'win' ? '命中' : a.result === 'lose' ? '未中' : '走水';
         resultHTML = `
-            <div style="text-align:right">
-                <span class="result-badge ${badgeClass}">${badgeText}</span>
-                ${a.finalScore ? `<div class="final-score">比分 ${a.finalScore}</div>` : ''}
-            </div>
+            <span class="result-badge ${a.result}">${badgeText}</span>
+            ${a.finalScore ? `<div class="final-score">${a.finalScore}</div>` : ''}
         `;
     }
 
     return `
         <div class="record-card" data-id="${a.id}">
-            <div class="record-sport">${sportIcon}</div>
+            <div class="record-sport" title="${sportLabel}">${sportIcon}</div>
             <div class="record-info">
-                <div class="record-match">${a.match || '未命名比赛'}</div>
+                <div class="record-match">${sportIcon} ${a.match || '未命名比赛'}</div>
                 <div class="record-meta">
                     <span class="record-tag ${typeInfo.class}">${typeInfo.label}</span>
                     <span class="record-date">${a.league || ''} · ${dateStr}</span>
@@ -274,22 +297,6 @@ function createRecordHTML(a, isPending) {
                 }
                 <button class="action-btn delete-btn" data-id="${a.id}">删除</button>
             </div>
-        </div>
-    `;
-}
-
-function createEmptyHTML(type) {
-    const icons = { pending: '📋', finished: '📊' };
-    const texts = {
-        pending: ['暂无待结算的分析记录', '请在上方录入赛前分析'],
-        finished: ['暂无已结算记录', '比赛结束后输入赛果进行结算']
-    };
-    const t = texts[type];
-    return `
-        <div class="empty-state">
-            <div class="empty-icon">${icons[type]}</div>
-            <p>${t[0]}</p>
-            <p class="empty-hint">${t[1]}</p>
         </div>
     `;
 }
@@ -311,10 +318,10 @@ function openModal(id) {
     const a = data.analyses.find(x => x.id === id);
     if (!a) return;
 
-    document.getElementById('modalMatchInfo').textContent =
-        `${SPORT_MAP[a.sport] || ''} ${a.match || '未命名'} · ${a.recommendation || ''}`;
+    const sportIcon = SPORT_MAP[a.sport] || '';
+    document.getElementById('modalMatchInfo').innerHTML =
+        `${sportIcon} <strong>${a.match || '未命名'}</strong> · ${a.recommendation || ''}`;
 
-    // 重置
     document.querySelectorAll('.result-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('finalScore').value = '';
 
@@ -330,20 +337,16 @@ function closeModal() {
 let currentSport = 'football';
 
 function initForm() {
-    // 设置默认日期为今天
     document.getElementById('matchDate').valueAsDate = new Date();
 
-    // 标签切换
     document.querySelectorAll('.form-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.form-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             currentSport = tab.dataset.sport;
-            updateBetTypeOptions();
         });
     });
 
-    // 推荐类型联动
     document.getElementById('betType').addEventListener('change', function() {
         const val = this.value;
         if (['asia', 'lottery'].includes(val)) {
@@ -353,7 +356,6 @@ function initForm() {
         }
     });
 
-    // 提交
     document.getElementById('analysisForm').addEventListener('submit', e => {
         e.preventDefault();
         addRecord();
@@ -365,13 +367,6 @@ function switchTab(sport) {
     document.querySelectorAll('.form-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.sport === sport);
     });
-    updateBetTypeOptions();
-}
-
-function updateBetTypeOptions() {
-    const select = document.getElementById('betType');
-    const val = select.value;
-    // 不自动切换已选项，只确保选项可用
 }
 
 function addRecord() {
@@ -404,10 +399,8 @@ function addRecord() {
     });
     saveData(data);
 
-    // 重置表单
     document.getElementById('analysisForm').reset();
     document.getElementById('matchDate').valueAsDate = new Date();
-    document.getElementById('league').focus();
 
     renderRecords();
     updateStats();
@@ -443,12 +436,11 @@ function initModal() {
             saveData(data);
             renderRecords();
             updateStats();
-            showToast('结算完成');
+            showToast(result === 'win' ? '🎉 命中！' : result === 'push' ? '走水' : '未命中');
         }
         closeModal();
     });
 
-    // 点击遮罩关闭
     document.getElementById('resultModal').addEventListener('click', e => {
         if (e.target === e.currentTarget) closeModal();
     });
@@ -474,37 +466,29 @@ function initCopy() {
             navigator.clipboard.writeText(text).then(() => {
                 showToast('QQ号码已复制：' + text);
             }).catch(() => {
-                showToast('复制失败，请手动复制');
+                showToast('复制失败');
             });
         });
     });
 }
 
-// ===== 导航高亮 =====
-function initNav() {
-    const sections = document.querySelectorAll('section[id]');
-    const navLinks = document.querySelectorAll('.nav-link');
-
-    window.addEventListener('scroll', () => {
-        let current = '';
-        sections.forEach(sec => {
-            const top = sec.offsetTop - 120;
-            if (scrollY >= top) current = sec.getAttribute('id');
-        });
-
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.getAttribute('href') === '#' + current);
-        });
+// ===== 密码锁事件 =====
+function initLock() {
+    document.getElementById('lockBtn').addEventListener('click', attemptUnlock);
+    document.getElementById('lockPassword').addEventListener('keypress', e => {
+        if (e.key === 'Enter') attemptUnlock();
     });
+    document.getElementById('logoutBtn').addEventListener('click', logout);
 }
 
 // ===== 初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
+    checkLock();
+    initLock();
     initForm();
     initModal();
     initFilters();
     initCopy();
-    initNav();
     renderRecords();
     updateStats();
 });
