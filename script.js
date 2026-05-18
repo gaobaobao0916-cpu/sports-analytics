@@ -2,6 +2,23 @@
 const PASSWORD = '@@bao657564332';
 const STORAGE_KEY = 'sports_analytics_v1';
 
+// ===== 预置数据（所有人可见）=====
+const DEFAULT_DATA = [
+    {
+        id: 1001,
+        sport: 'football',
+        league: '英超',
+        date: '2025-03-15T20:00:00',
+        match: '曼联 vs 诺丁汉森林',
+        betType: 'asia',
+        recommendation: '乔治十字-1.75',
+        odds: '0.95',
+        analysis: '',
+        result: 'win',
+        finalScore: '3:2'
+    }
+];
+
 // ===== 状态 =====
 let editingId = null;
 let currentFilter = 'all';
@@ -10,10 +27,16 @@ let isAdmin = false;
 // ===== 数据存储 =====
 function getData() {
     try {
-        const d = localStorage.getItem(STORAGE_KEY);
-        return d ? JSON.parse(d) : { analyses: [] };
+        // 合并预置数据 + 本地存储数据
+        const local = localStorage.getItem(STORAGE_KEY);
+        const localData = local ? JSON.parse(local) : { analyses: [] };
+        // 用 Map 去重，本地数据覆盖预置数据
+        const map = new Map();
+        DEFAULT_DATA.forEach(a => map.set(a.id, a));
+        localData.analyses.forEach(a => map.set(a.id, a));
+        return { analyses: Array.from(map.values()) };
     } catch {
-        return { analyses: [] };
+        return { analyses: [...DEFAULT_DATA] };
     }
 }
 
