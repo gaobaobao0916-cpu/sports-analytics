@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
     <!-- 顶部导航 -->
@@ -19,9 +19,9 @@
         </div>
         <div class="nav-right">
             <a href="#stats" class="nav-btn">数据</a>
-            <a href="#formSection" class="nav-btn">录入</a>
             <a href="#records" class="nav-btn">记录</a>
             <a href="#contact" class="nav-btn">联系</a>
+            <button class="nav-lock" id="lockBtn" title="管理模式">🔒</button>
         </div>
     </nav>
 
@@ -86,8 +86,8 @@
             </div>
         </section>
 
-        <!-- 录入表单 -->
-        <section class="section" id="formSection">
+        <!-- 录入表单（仅管理员可见） -->
+        <section class="section admin-only" id="formSection" style="display:none">
             <div class="container">
                 <h2 class="section-title">录入赛前分析</h2>
                 <div class="form-wrap">
@@ -230,6 +230,22 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <script src="script.js?v=4"></script>
+    <!-- 密码弹窗 -->
+    <div class="modal" id="pwdModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-box pwd-box">
+            <div class="modal-head">
+                <h3>管理模式</h3>
+                <button class="modal-x" id="pwdClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="pwd-tip">输入密码解锁管理功能</p>
+                <input type="password" id="pwdInput" class="pwd-input" placeholder="请输入密码">
+                <button class="submit-btn" id="pwdSubmit">解锁</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=5"></script>
 </body>
 </html>

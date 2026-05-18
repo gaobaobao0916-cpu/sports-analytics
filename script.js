@@ -5,6 +5,7 @@ const STORAGE_KEY = 'sports_analytics_v1';
 // ===== 状态 =====
 let editingId = null;
 let currentFilter = 'all';
+let isAdmin = false;
 
 // ===== 数据存储 =====
 function getData() {
@@ -118,6 +119,16 @@ function createRecHTML(a, pending) {
         badge = `<span class="rec-badge ${a.result}">${txt}</span>`;
     }
     
+    let actions = '';
+    if (isAdmin) {
+        actions = `
+            <div class="rec-actions">
+                ${pending ? `<button class="rec-btn settle" data-id="${a.id}">结算</button>` : ''}
+                <button class="rec-btn delete" data-id="${a.id}">删除</button>
+            </div>
+        `;
+    }
+    
     return `
         <div class="rec-card">
             <div class="rec-icon">${icon}</div>
@@ -131,10 +142,7 @@ function createRecHTML(a, pending) {
                 ${rec ? `<div class="rec-recommendation">推荐：${rec}${odds ? ' @' + odds : ''}</div>` : ''}
             </div>
             ${badge}
-            <div class="rec-actions">
-                ${pending ? `<button class="rec-btn settle" data-id="${a.id}">结算</button>` : ''}
-                <button class="rec-btn delete" data-id="${a.id}">删除</button>
-            </div>
+            ${actions}
         </div>
     `;
 }
@@ -326,6 +334,61 @@ function initCopy() {
     });
 }
 
+// ===== 管理模式 =====
+function setAdminMode(enabled) {
+    isAdmin = enabled;
+    const lockBtn = document.getElementById('lockBtn');
+    const formSection = document.querySelector('#formSection');
+    
+    if (enabled) {
+        lockBtn.textContent = '🔓';
+        lockBtn.classList.add('unlocked');
+        formSection.style.display = 'block';
+        document.getElementById('pwdModal').classList.remove('active');
+    } else {
+        lockBtn.textContent = '🔒';
+        lockBtn.classList.remove('unlocked');
+        formSection.style.display = 'none';
+    }
+    
+    renderRecords();
+}
+
+function initAdminMode() {
+    const lockBtn = document.getElementById('lockBtn');
+    const pwdModal = document.getElementById('pwdModal');
+    const pwdClose = document.getElementById('pwdClose');
+    const pwdSubmit = document.getElementById('pwdSubmit');
+    const pwdInput = document.getElementById('pwdInput');
+    
+    lockBtn.onclick = () => {
+        if (isAdmin) {
+            setAdminMode(false);
+        } else {
+            pwdInput.value = '';
+            pwdModal.classList.add('active');
+            pwdInput.focus();
+        }
+    };
+    
+    pwdClose.onclick = () => pwdModal.classList.remove('active');
+    pwdModal.querySelector('.modal-overlay').onclick = () => pwdModal.classList.remove('active');
+    
+    pwdSubmit.onclick = () => {
+        if (pwdInput.value === PASSWORD) {
+            setAdminMode(true);
+            toast('已解锁管理模式');
+        } else {
+            toast('密码错误');
+            pwdInput.value = '';
+        }
+    };
+    
+    pwdInput.onkeydown = e => {
+        if (e.key === 'Enter') pwdSubmit.click();
+    };
+}
+
 // ===== 初始化 =====
 document.addEventListener('DOMContentLoaded', () => {
     // 结算弹窗
@@ -346,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initForm();
     initFilters();
     initCopy();
+    initAdminMode();
     
     renderRecords();
     updateStats();
