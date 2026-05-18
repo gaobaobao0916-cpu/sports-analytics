@@ -651,6 +651,13 @@ input, select { font-family: inherit; }
     width: fit-content;
 }
 
+.rec-score {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text3);
+}
+
 .rec-badge {
     padding: 6px 14px;
     border-radius: 20px;

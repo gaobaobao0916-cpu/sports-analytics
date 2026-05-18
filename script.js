@@ -165,13 +165,32 @@ function updateStats() {
     document.getElementById('bkHandicapRate').textContent = s.bkHc;
 }
 
-// ===== 记录 =====
+// ===== 比赛状态计算 =====
+function getMatchStatus(dateStr, sport) {
+    if (!dateStr) return { text: '未开赛', cls: 'o', started: false, ended: false };
+    
+    const matchTime = new Date(dateStr);
+    const now = new Date();
+    
+    // 足球约120分钟（90+中场15+伤停补时）
+    // 篮球约150分钟（48分钟+暂停/节间休息，NBA更久）
+    const duration = sport === 'basketball' ? 150 * 60 * 1000 : 120 * 60 * 1000;
+    const endTime = new Date(matchTime.getTime() + duration);
+    
+    if (now < matchTime) {
+        return { text: '未开赛', cls: 'o', started: false, ended: false };
+    } else if (now < endTime) {
+        return { text: '正在进行中', cls: 'g', started: true, ended: false };
+    } else {
+        return { text: '已结束', cls: '', started: true, ended: true };
+    }
+}
+
 function isMatchStarted(dateStr) {
     if (!dateStr) return false;
-    const md = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return md <= today;
+    const matchTime = new Date(dateStr);
+    const now = new Date();
+    return now >= matchTime;
 }
 
 function formatDateTime(dateStr) {
@@ -189,7 +208,7 @@ function createRecHTML(a, pending) {
     const t = TYPE_MAP[a.betType] || { label: a.betType, cls: '' };
     const icon = SPORT_MAP[a.sport] || '📋';
     const dateTime = a.date ? formatDateTime(a.date) : '';
-    const started = isMatchStarted(a.date);
+    const status = getMatchStatus(a.date, a.sport);
     const rec = a.recommendation || '';
     const odds = a.odds || '';
     
@@ -209,6 +228,12 @@ function createRecHTML(a, pending) {
         `;
     }
     
+    // 状态标签：未开赛/进行中/已结束
+    let statusTag = '';
+    if (pending) {
+        statusTag = `<span class="rec-tag ${status.cls}">${status.text}</span>`;
+    }
+    
     return `
         <div class="rec-card">
             <div class="rec-icon">${icon}</div>
@@ -217,9 +242,10 @@ function createRecHTML(a, pending) {
                 <div class="rec-meta">
                     <span class="rec-tag ${t.cls}">${t.label}</span>
                     <span class="rec-date">${a.league} · ${dateTime}</span>
-                    ${pending && !started ? '<span class="rec-tag o">未开赛</span>' : ''}
+                    ${statusTag}
                 </div>
                 ${rec ? `<div class="rec-recommendation">推荐：${rec}${odds ? ' @' + odds : ''}</div>` : ''}
+                ${a.finalScore ? `<div class="rec-score">最终比分：${a.finalScore}</div>` : ''}
             </div>
             ${badge}
             ${actions}
@@ -295,6 +321,82 @@ function bindRecEvents() {
     });
 }
 
+// ===== 盘口自动解析 =====
+function autoAnalyzeResult(record, score) {
+    if (!score || !record.recommendation) return null;
+    
+    const [homeGoals, awayGoals] = score.split(/[:：\-]/).map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    if (homeGoals === undefined || awayGoals === undefined) return null;
+    
+    const rec = record.recommendation.trim();
+    const teams = record.match.split(/\s*vs\s*/i).map(t => t.trim());
+    
+    // 亚盘 / 让球：格式 "球队名-盘口" 或 "球队名+盘口"
+    if (['asia', 'handicap'].includes(record.betType)) {
+        // 提取盘口数字（支持 .25, .5, .75）
+        const handicapMatch = rec.match(/([+-]?\d+\.?\d*)/);
+        if (!handicapMatch) return null;
+        const handicap = parseFloat(handicapMatch[0]);
+        
+        // 确定推荐方
+        let recommendedTeam = null;
+        for (const team of teams) {
+            if (rec.includes(team)) {
+                recommendedTeam = team;
+                break;
+            }
+        }
+        if (!recommendedTeam) return null;
+        
+        // 计算净胜球（从推荐方角度）
+        const isHome = teams[0] === recommendedTeam;
+        const netGoals = isHome ? homeGoals - awayGoals : awayGoals - homeGoals;
+        
+        // 让球盘结算：净胜球 > 盘口则赢，= 盘口则走水，< 盘口则输
+        const effective = netGoals + handicap; // handicap为负数表示让球
+        
+        if (effective > 0) return 'win';
+        if (effective === 0) return 'push';
+        return 'lose';
+    }
+    
+    // 大小球：格式 "大X.5" 或 "小X.5"
+    if (record.betType === 'overunder') {
+        const ouMatch = rec.match(/([大小])\s*(\d+\.?\d*)/);
+        if (!ouMatch) return null;
+        
+        const type = ouMatch[1];
+        const line = parseFloat(ouMatch[2]);
+        const total = homeGoals + awayGoals;
+        
+        if (type === '大') {
+            if (total > line) return 'win';
+            if (total === line) return 'push';
+            return 'lose';
+        } else {
+            if (total < line) return 'win';
+            if (total === line) return 'push';
+            return 'lose';
+        }
+    }
+    
+    // 竞彩（胜平负）
+    if (record.betType === 'lottery') {
+        // 简化处理：推荐包含"主胜"/"客胜"/"平"等关键字
+        const homeWin = homeGoals > awayGoals;
+        const draw = homeGoals === awayGoals;
+        const awayWin = homeGoals < awayGoals;
+        
+        if (rec.includes('主胜') && homeWin) return 'win';
+        if (rec.includes('客胜') && awayWin) return 'win';
+        if (rec.includes('平') && draw) return 'win';
+        if ((rec.includes('主胜') && !homeWin) || (rec.includes('客胜') && !awayWin) || (rec.includes('平') && !draw)) return 'lose';
+        return null;
+    }
+    
+    return null;
+}
+
 // ===== 结算弹窗 =====
 function openSettleModal(id) {
     editingId = id;
@@ -305,7 +407,8 @@ function openSettleModal(id) {
         `${SPORT_MAP[a.sport] || ''} <strong>${a.match}</strong> · ${a.recommendation}`;
     
     document.querySelectorAll('.r-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('finalScore').value = '';
+    document.getElementById('finalScore').value = a.finalScore || '';
+    document.getElementById('autoResult').style.display = 'none';
     
     document.getElementById('settleModal').classList.add('active');
 }
@@ -313,6 +416,33 @@ function openSettleModal(id) {
 function closeSettleModal() {
     document.getElementById('settleModal').classList.remove('active');
     editingId = null;
+}
+
+function performAutoAnalysis() {
+    const a = cloudData.find(x => x.id === editingId);
+    if (!a) return;
+    
+    const score = document.getElementById('finalScore').value.trim();
+    if (!score) {
+        toast('请先输入最终比分');
+        return;
+    }
+    
+    const result = autoAnalyzeResult(a, score);
+    const autoResultDiv = document.getElementById('autoResult');
+    
+    if (result) {
+        // 自动选择对应按钮
+        document.querySelectorAll('.r-btn').forEach(b => b.classList.remove('active'));
+        const targetBtn = document.querySelector(`.r-btn[data-r="${result}"]`);
+        if (targetBtn) targetBtn.classList.add('active');
+        
+        const resultText = result === 'win' ? '✅ 命中' : result === 'push' ? '↩️ 走水' : '❌ 未中';
+        autoResultDiv.innerHTML = `<span style="color:var(--green);font-weight:600;">自动分析结果：${resultText}</span>`;
+    } else {
+        autoResultDiv.innerHTML = `<span style="color:var(--orange);">⚠️ 无法自动分析，请手动选择结果</span>`;
+    }
+    autoResultDiv.style.display = 'block';
 }
 
 async function doSettle() {
@@ -480,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.getElementById('modalConfirm').onclick = doSettle;
+    document.getElementById('modalAuto').onclick = performAutoAnalysis;
     
     // 初始化
     initForm();
