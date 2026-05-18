@@ -25,6 +25,7 @@
                 录入分析
             </button>
             <a href="#contact" class="nav-btn">联系</a>
+            <button class="nav-btn" id="syncBtn" title="数据同步">☁️</button>
         </div>
     </nav>
 
@@ -223,6 +224,38 @@
                 </div>
             </div>
         </section>
+
+        <!-- 同步设置弹窗 -->
+        <div class="modal" id="syncModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-box" style="width:420px;">
+                <div class="modal-head">
+                    <h3>☁️ 数据同步设置</h3>
+                    <button class="modal-x" id="syncClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+                        使用 GitHub Gist 实现多设备数据同步。<br>
+                        首次使用需要创建 Personal Access Token（仅需 gist 权限）。
+                    </p>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label>GitHub Token</label>
+                        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label>Gist ID（首次留空自动创建）</label>
+                        <input type="text" id="gistId" placeholder="可选，留空自动创建">
+                    </div>
+                    <div class="sync-status" id="syncStatus" style="font-size:13px;color:var(--text2);margin-bottom:12px;"></div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn-cancel" id="syncCancel">取消</button>
+                    <button class="btn-confirm" id="syncTest">测试连接</button>
+                    <button class="btn-confirm" id="syncPull">拉取数据</button>
+                    <button class="btn-confirm" id="syncPush">推送数据</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- 结算弹窗 -->

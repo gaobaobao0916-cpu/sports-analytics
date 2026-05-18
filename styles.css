@@ -698,6 +698,13 @@ input, select { font-family: inherit; }
     color: var(--text2);
 }
 
+.rec-recommendation {
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue);
+}
+
 .rec-badge {
     padding: 6px 14px;
     border-radius: 20px;
@@ -974,6 +981,35 @@ input, select { font-family: inherit; }
     display: flex;
     gap: 12px;
     padding: 0 24px 24px;
+    flex-wrap: wrap;
+}
+
+.modal-foot .btn-confirm,
+.modal-foot .btn-cancel {
+    flex: 1;
+    min-width: 80px;
+}
+
+.sync-status {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.sync-status.ok {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.sync-status.err {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.sync-status.info {
+    background: #e3f2fd;
+    color: #1565c0;
 }
 
 .btn-cancel,

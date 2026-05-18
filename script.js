@@ -21,6 +21,11 @@ function getData() {
 
 function saveData(d) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    // 后台静默同步
+    const cfg = getSyncConfig();
+    if (cfg.token && cfg.gistId) {
+        pushToGist().catch(() => {});
+    }
 }
 
 // ===== 类型映射 =====
@@ -173,6 +178,8 @@ function createRecHTML(a, pending) {
     const dateTime = a.date ? formatDateTime(a.date) : '';
     const started = isMatchStarted(a.date);
     const canOp = isUnlocked && started;
+    const rec = a.recommendation || '';
+    const odds = a.odds || '';
     
     let badge = '';
     if (!pending && a.result) {
@@ -193,6 +200,7 @@ function createRecHTML(a, pending) {
                     <span class="rec-date">${a.league} · ${dateTime}</span>
                     ${pending && !started ? '<span class="rec-tag o">未开赛</span>' : ''}
                 </div>
+                ${rec ? `<div class="rec-recommendation">推荐：${rec}${odds ? ' @' + odds : ''}</div>` : ''}
             </div>
             ${badge}
             <div class="rec-actions">
@@ -461,6 +469,175 @@ document.addEventListener('DOMContentLoaded', () => {
     initCopy();
     
     checkUnlock();
-    renderRecords();
-    updateStats();
+    
+    // 尝试从云端拉取数据
+    const cfg = getSyncConfig();
+    if (cfg.token && cfg.gistId) {
+        pullFromGist().then(() => {
+            renderRecords();
+            updateStats();
+        }).catch(() => {
+            renderRecords();
+            updateStats();
+        });
+    } else {
+        renderRecords();
+        updateStats();
+    }
+    
+    initSync();
 });
+
+// ===== 云端同步 =====
+const SYNC_CONFIG_KEY = 'sports_sync_config';
+const GIST_FILENAME = 'sports_analytics_data.json';
+
+function getSyncConfig() {
+    try {
+        const c = localStorage.getItem(SYNC_CONFIG_KEY);
+        return c ? JSON.parse(c) : { token: '', gistId: '' };
+    } catch {
+        return { token: '', gistId: '' };
+    }
+}
+
+function saveSyncConfig(cfg) {
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+async function apiRequest(url, method, token, body) {
+    const opts = {
+        method,
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `HTTP ${res.status}`);
+    }
+    return res.json();
+}
+
+async function createGist(token) {
+    const data = {
+        description: '博弈增强型分析模型 - 赛事数据',
+        public: false,
+        files: {
+            [GIST_FILENAME]: {
+                content: JSON.stringify({ analyses: [] })
+            }
+        }
+    };
+    const gist = await apiRequest('https://api.github.com/gists', 'POST', token, data);
+    return gist.id;
+}
+
+async function pushToGist() {
+    const cfg = getSyncConfig();
+    if (!cfg.token) throw new Error('未配置 Token');
+    
+    let gistId = cfg.gistId;
+    if (!gistId) {
+        gistId = await createGist(cfg.token);
+        cfg.gistId = gistId;
+        saveSyncConfig(cfg);
+    }
+    
+    const d = getData();
+    await apiRequest(`https://api.github.com/gists/${gistId}`, 'PATCH', cfg.token, {
+        files: {
+            [GIST_FILENAME]: {
+                content: JSON.stringify(d, null, 2)
+            }
+        }
+    });
+    return gistId;
+}
+
+async function pullFromGist() {
+    const cfg = getSyncConfig();
+    if (!cfg.token) throw new Error('未配置 Token');
+    if (!cfg.gistId) throw new Error('未配置 Gist ID，请先推送一次');
+    
+    const gist = await apiRequest(`https://api.github.com/gists/${cfg.gistId}`, 'GET', cfg.token);
+    const file = gist.files[GIST_FILENAME];
+    if (!file) throw new Error('Gist 中未找到数据文件');
+    
+    const data = JSON.parse(file.content);
+    saveData(data);
+    return data;
+}
+
+function setSyncStatus(msg, type) {
+    const el = document.getElementById('syncStatus');
+    el.textContent = msg;
+    el.className = 'sync-status ' + (type || '');
+}
+
+function initSync() {
+    const cfg = getSyncConfig();
+    document.getElementById('githubToken').value = cfg.token || '';
+    document.getElementById('gistId').value = cfg.gistId || '';
+    
+    const openSync = () => {
+        document.getElementById('syncModal').classList.add('active');
+        setSyncStatus('');
+    };
+    const closeSync = () => {
+        document.getElementById('syncModal').classList.remove('active');
+    };
+    
+    document.getElementById('syncBtn').onclick = openSync;
+    document.getElementById('syncClose').onclick = closeSync;
+    document.getElementById('syncCancel').onclick = closeSync;
+    document.querySelector('#syncModal .modal-overlay').onclick = closeSync;
+    
+    document.getElementById('syncTest').onclick = async () => {
+        const token = document.getElementById('githubToken').value.trim();
+        if (!token) { setSyncStatus('请输入 Token', 'err'); return; }
+        setSyncStatus('测试中...', 'info');
+        try {
+            await apiRequest('https://api.github.com/user', 'GET', token);
+            setSyncStatus('✓ Token 有效', 'ok');
+        } catch (e) {
+            setSyncStatus('✗ ' + e.message, 'err');
+        }
+    };
+    
+    document.getElementById('syncPush').onclick = async () => {
+        const token = document.getElementById('githubToken').value.trim();
+        const gistId = document.getElementById('gistId').value.trim();
+        if (!token) { setSyncStatus('请输入 Token', 'err'); return; }
+        saveSyncConfig({ token, gistId });
+        setSyncStatus('推送中...', 'info');
+        try {
+            const id = await pushToGist();
+            document.getElementById('gistId').value = id;
+            saveSyncConfig({ token, gistId: id });
+            setSyncStatus(`✓ 已推送，Gist ID: ${id.slice(0, 8)}...`, 'ok');
+        } catch (e) {
+            setSyncStatus('✗ ' + e.message, 'err');
+        }
+    };
+    
+    document.getElementById('syncPull').onclick = async () => {
+        const token = document.getElementById('githubToken').value.trim();
+        const gistId = document.getElementById('gistId').value.trim();
+        if (!token) { setSyncStatus('请输入 Token', 'err'); return; }
+        saveSyncConfig({ token, gistId });
+        setSyncStatus('拉取中...', 'info');
+        try {
+            await pullFromGist();
+            renderRecords();
+            updateStats();
+            setSyncStatus('✓ 拉取成功，数据已更新', 'ok');
+        } catch (e) {
+            setSyncStatus('✗ ' + e.message, 'err');
+        }
+    };
+}
