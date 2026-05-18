@@ -234,47 +234,57 @@ function renderRecords() {
 }
 
 function bindRecEvents() {
-    document.querySelectorAll('.rec-btn.settle').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            if (btn.classList.contains('locked')) {
-                if (!isUnlocked) {
-                    toast('请先解锁');
-                    openPwdModal();
-                } else {
-                    toast('比赛尚未开始');
+    // 使用事件委托，更可靠
+    document.querySelectorAll('.rec-card').forEach(card => {
+        const settleBtn = card.querySelector('.rec-btn.settle');
+        const deleteBtn = card.querySelector('.rec-btn.delete');
+        
+        if (settleBtn) {
+            settleBtn.onclick = (e) => {
+                e.stopPropagation();
+                const id = parseInt(settleBtn.dataset.id);
+                if (settleBtn.classList.contains('locked')) {
+                    if (!isUnlocked) {
+                        toast('请先解锁');
+                        openPwdModal();
+                    } else {
+                        toast('比赛尚未开始');
+                    }
+                    return;
                 }
-                return;
-            }
-            const d = getData();
-            const a = d.analyses.find(x => x.id === id);
-            if (!isMatchStarted(a.date)) {
-                toast('比赛尚未开始');
-                return;
-            }
-            openSettleModal(id);
-        };
-    });
-    
-    document.querySelectorAll('.rec-btn.delete').forEach(btn => {
-        btn.onclick = () => {
-            if (btn.classList.contains('locked')) {
-                if (!isUnlocked) {
-                    toast('请先解锁');
-                    openPwdModal();
-                }
-                return;
-            }
-            if (confirm('确定删除？')) {
-                const id = parseInt(btn.dataset.id);
                 const d = getData();
-                d.analyses = d.analyses.filter(a => a.id !== id);
-                saveData(d);
-                renderRecords();
-                updateStats();
-                toast('已删除');
-            }
-        };
+                const a = d.analyses.find(x => x.id === id);
+                if (!isMatchStarted(a.date)) {
+                    toast('比赛尚未开始');
+                    return;
+                }
+                openSettleModal(id);
+            };
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                console.log('删除按钮点击', deleteBtn.classList.contains('locked'), isUnlocked);
+                if (deleteBtn.classList.contains('locked')) {
+                    if (!isUnlocked) {
+                        toast('请先解锁');
+                        openPwdModal();
+                    }
+                    return;
+                }
+                if (confirm('确定删除？')) {
+                    const id = parseInt(deleteBtn.dataset.id);
+                    console.log('执行删除, id:', id);
+                    const d = getData();
+                    d.analyses = d.analyses.filter(a => a.id !== id);
+                    saveData(d);
+                    renderRecords();
+                    updateStats();
+                    toast('已删除');
+                }
+            };
+        }
     });
 }
 
