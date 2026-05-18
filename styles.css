@@ -1074,13 +1074,23 @@ input, select { font-family: inherit; }
         grid-template-columns: 40px 1fr;
         gap: 12px;
     }
-    
+
     .rec-badge, .rec-date {
         display: none;
     }
-    
+
     .rec-actions {
         grid-column: 2;
+    }
+
+    /* 移动端确保显示推荐内容 */
+    .rec-recommendation {
+        font-size: 12px !important;
+        padding: 3px 8px !important;
+    }
+
+    .rec-match {
+        font-size: 14px !important;
     }
     
     .contact-grid {
