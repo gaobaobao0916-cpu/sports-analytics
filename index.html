@@ -7,35 +7,20 @@
     <title>博弈增强型分析 · 胜率统计中心</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- SVG渐变定义 -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color: #0066cc"/>
+                <stop offset="100%" style="stop-color: #10b981"/>
+            </linearGradient>
+        </defs>
+    </svg>
 </head>
 <body>
-    <canvas id="bgCanvas"></canvas>
-
-    <!-- 密码锁屏 -->
-    <div class="lock-overlay" id="lockOverlay">
-        <div class="lock-card">
-            <div class="lock-icon">🔒</div>
-            <h2 class="lock-title">胜率统计中心</h2>
-            <p class="lock-subtitle">请输入访问密码</p>
-            <div class="lock-input-group">
-                <input type="password" id="lockPassword" class="lock-input" placeholder="输入密码..." autocomplete="off">
-                <button class="lock-btn" id="lockBtn">解锁</button>
-            </div>
-            <p class="lock-error" id="lockError"></p>
-        </div>
-    </div>
-
-    <!-- 已登录状态栏 -->
-    <div class="login-bar" id="loginBar">
-        <div class="login-info">
-            <span class="login-icon">✓</span>
-            <span>已解锁</span>
-        </div>
-        <button class="logout-btn" id="logoutBtn">退出</button>
-    </div>
-
     <nav class="navbar">
         <div class="nav-brand">
             <span class="brand-icon">◆</span>
@@ -50,7 +35,7 @@
     </nav>
 
     <header class="hero">
-        <div class="hero-glow"></div>
+        <div class="hero-bg-gradient"></div>
         <div class="hero-content">
             <p class="hero-subtitle">专业赛事分析 · 数据驱动决策</p>
             <h1 class="hero-title">
@@ -59,7 +44,6 @@
 
             <div class="systems-showcase">
                 <div class="system-card football-card">
-                    <div class="system-glow football-glow"></div>
                     <div class="system-icon">⚽</div>
                     <div class="system-name">博弈增强型分析模型</div>
                     <div class="system-version">V3.2.1 修订版</div>
@@ -76,7 +60,6 @@
                 </div>
 
                 <div class="system-card basketball-card">
-                    <div class="system-glow basketball-glow"></div>
                     <div class="system-icon">🏀</div>
                     <div class="system-name">Basketball</div>
                     <div class="system-version">V1.7.2 （全球联赛·分析师共识版）</div>
@@ -125,7 +108,7 @@
                     <div class="stat-card">
                         <div class="stat-number" id="streakCount">0</div>
                         <div class="stat-label">当前连红</div>
-                        <div class="streak-flame" id="streakFlame">🔥</div>
+                        <div class="streak-indicator" id="streakIndicator"></div>
                     </div>
                 </div>
 
@@ -158,18 +141,41 @@
         <!-- 录入分析 -->
         <section id="add" class="add-section">
             <div class="container">
-                <h2 class="section-title dark">
+                <h2 class="section-title">
                     <span class="title-icon">◈</span>赛前分析录入<span class="title-icon">◈</span>
                 </h2>
 
-                <div class="form-card">
-                    <div class="form-tabs">
-                        <button class="form-tab active" data-sport="football">
-                            <span class="tab-icon">⚽</span><span>足球</span>
-                        </button>
-                        <button class="form-tab" data-sport="basketball">
-                            <span class="tab-icon">🏀</span><span>篮球</span>
-                        </button>
+                <!-- 解锁按钮（未解锁时显示） -->
+                <div class="unlock-prompt" id="unlockPrompt">
+                    <div class="unlock-card">
+                        <div class="unlock-icon">🔐</div>
+                        <h3>录入权限验证</h3>
+                        <p>请输入密码以解锁赛前分析录入功能</p>
+                        <div class="unlock-input-group">
+                            <input type="password" id="unlockPassword" class="unlock-input" placeholder="输入密码..." autocomplete="off">
+                            <button class="unlock-btn" id="unlockBtn">解锁</button>
+                        </div>
+                        <p class="unlock-error" id="unlockError"></p>
+                    </div>
+                </div>
+
+                <!-- 录入表单（解锁后显示） -->
+                <div class="form-card hidden" id="formCard">
+                    <div class="form-header">
+                        <div class="form-tabs">
+                            <button class="form-tab active" data-sport="football">
+                                <span class="tab-icon">⚽</span><span>足球</span>
+                            </button>
+                            <button class="form-tab" data-sport="basketball">
+                                <span class="tab-icon">🏀</span><span>篮球</span>
+                            </button>
+                        </div>
+                        <button class="logout-btn" id="formLogoutBtn">退出登录</button>
+                    </div>
+
+                    <div class="disclaimer">
+                        <span class="disclaimer-icon">⚠️</span>
+                        <span>赛前分析仅用于体育赛事交流参考，不构成任何投注建议。请遵守当地法律法规，理性观看比赛。</span>
                     </div>
 
                     <form id="analysisForm" class="analysis-form">
@@ -271,7 +277,7 @@
         <!-- 联系方式 -->
         <section id="contact" class="contact-section">
             <div class="container">
-                <h2 class="section-title dark">
+                <h2 class="section-title">
                     <span class="title-icon">◈</span>联系方式<span class="title-icon">◈</span>
                 </h2>
 
@@ -322,6 +328,7 @@
             </div>
             <div class="modal-body">
                 <div class="match-info" id="modalMatchInfo"></div>
+                <div class="time-warning" id="timeWarning"></div>
                 <div class="result-options">
                     <label class="result-label">赛果判定</label>
                     <div class="result-btns">
@@ -344,6 +351,26 @@
             <div class="modal-footer">
                 <button class="modal-cancel" id="modalCancel">取消</button>
                 <button class="modal-confirm" id="modalConfirm">确认结算</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作锁定提示 -->
+    <div class="modal-overlay" id="lockModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">⚠️ 操作受限</h3>
+                <button class="modal-close" id="lockModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="lock-warning">
+                    <div class="lock-warning-icon">🔒</div>
+                    <p id="lockWarningText">比赛尚未开始，无法进行结算操作。</p>
+                    <p class="lock-hint">请在比赛结束后再进行结算录入。</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-confirm single" id="lockModalOk">我知道了</button>
             </div>
         </div>
     </div>
