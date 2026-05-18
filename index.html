@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="专业足球篮球赛事分析胜率统计平台">
+    <title>博弈增强型分析 · 胜率统计中心</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 背景粒子画布 -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">◆</span>
+            <span class="brand-text">ANALYTICS PRO</span>
+        </div>
+        <div class="nav-links">
+            <a href="#stats" class="nav-link">数据面板</a>
+            <a href="#add" class="nav-link">录入分析</a>
+            <a href="#records" class="nav-link">历史记录</a>
+            <a href="#contact" class="nav-link">联系方式</a>
+        </div>
+    </nav>
+
+    <!-- 英雄区 -->
+    <header class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+            <p class="hero-subtitle">专业赛事分析 · 数据驱动决策</p>
+            <h1 class="hero-title">
+                <span class="gradient-text">胜率统计中心</span>
+            </h1>
+
+            <div class="systems-showcase">
+                <div class="system-card football-card">
+                    <div class="system-glow football-glow"></div>
+                    <div class="system-icon">⚽</div>
+                    <div class="system-name">博弈增强型分析模型</div>
+                    <div class="system-version">V3.2.1 修订版</div>
+                    <div class="system-tags">
+                        <span class="tag tag-asia">亚盘推荐</span>
+                        <span class="tag tag-lottery">竞彩推荐</span>
+                    </div>
+                </div>
+
+                <div class="divider">
+                    <span class="divider-line"></span>
+                    <span class="divider-icon">◆</span>
+                    <span class="divider-line"></span>
+                </div>
+
+                <div class="system-card basketball-card">
+                    <div class="system-glow basketball-glow"></div>
+                    <div class="system-icon">🏀</div>
+                    <div class="system-name">Basketball</div>
+                    <div class="system-version">V1.7.2 （全球联赛·分析师共识版）</div>
+                    <div class="system-tags">
+                        <span class="tag tag-overunder">大小分推荐</span>
+                        <span class="tag tag-handicap">让球推荐</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 统计概览 -->
+    <section id="stats" class="stats-section">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="title-icon">◈</span>
+                实时数据面板
+                <span class="title-icon">◈</span>
+            </h2>
+
+            <div class="stats-grid">
+                <div class="stat-card total-card">
+                    <div class="stat-number" id="totalCount">0</div>
+                    <div class="stat-label">总分析场次</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill" id="totalBar"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card win-card">
+                    <div class="stat-number" id="winCount">0</div>
+                    <div class="stat-label">命中场次</div>
+                    <div class="stat-bar">
+                        <div class="stat-fill win-fill" id="winBar"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card rate-card">
+                    <div class="stat-number" id="winRate">0%</div>
+                    <div class="stat-label">总体胜率</div>
+                    <div class="circular-progress">
+                        <svg viewBox="0 0 120 120">
+                            <circle class="progress-bg" cx="60" cy="60" r="50"/>
+                            <circle class="progress-fill" id="rateCircle" cx="60" cy="60" r="50"/>
+                        </svg>
+                        <div class="progress-text" id="rateText">0%</div>
+                    </div>
+                </div>
+
+                <div class="stat-card streak-card">
+                    <div class="stat-number" id="streakCount">0</div>
+                    <div class="stat-label">当前连红</div>
+                    <div class="streak-flame" id="streakFlame">🔥</div>
+                </div>
+            </div>
+
+            <!-- 分类统计 -->
+            <div class="category-stats">
+                <div class="cat-block">
+                    <h3 class="cat-title">⚽ 足球统计</h3>
+                    <div class="cat-row">
+                        <div class="cat-item">
+                            <span class="cat-name">亚盘推荐</span>
+                            <span class="cat-value" id="fbAsiaRate">--</span>
+                        </div>
+                        <div class="cat-item">
+                            <span class="cat-name">竞彩推荐</span>
+                            <span class="cat-value" id="fbLotteryRate">--</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="cat-block">
+                    <h3 class="cat-title">🏀 篮球统计</h3>
+                    <div class="cat-row">
+                        <div class="cat-item">
+                            <span class="cat-name">大小分推荐</span>
+                            <span class="cat-value" id="bkOuRate">--</span>
+                        </div>
+                        <div class="cat-item">
+                            <span class="cat-name">让球推荐</span>
+                            <span class="cat-value" id="bkHandicapRate">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 录入分析 -->
+    <section id="add" class="add-section">
+        <div class="container">
+            <h2 class="section-title dark">
+                <span class="title-icon">◈</span>
+                赛前分析录入
+                <span class="title-icon">◈</span>
+            </h2>
+
+            <div class="form-card">
+                <div class="form-tabs">
+                    <button class="form-tab active" data-sport="football">
+                        <span class="tab-icon">⚽</span>
+                        <span>足球</span>
+                    </button>
+                    <button class="form-tab" data-sport="basketball">
+                        <span class="tab-icon">🏀</span>
+                        <span>篮球</span>
+                    </button>
+                </div>
+
+                <form id="analysisForm" class="analysis-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">赛事/联赛</label>
+                            <input type="text" id="league" class="form-input" placeholder="如：英超、NBA、欧冠..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">比赛日期</label>
+                            <input type="date" id="matchDate" class="form-input" required>
+                        </div>
+
+                        <div class="form-group wide">
+                            <label class="form-label">对阵双方</label>
+                            <input type="text" id="matchTeams" class="form-input" placeholder="如：曼联 vs 利物浦" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">推荐类型</label>
+                            <select id="betType" class="form-input form-select" required>
+                                <option value="">请选择推荐类型</option>
+                                <optgroup label="⚽ 足球推荐" class="football-options">
+                                    <option value="asia">亚盘推荐</option>
+                                    <option value="lottery">竞彩推荐（胜平负）</option>
+                                </optgroup>
+                                <optgroup label="🏀 篮球推荐" class="basketball-options">
+                                    <option value="overunder">大小分推荐</option>
+                                    <option value="handicap">让球（让分）推荐</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">具体推荐</label>
+                            <input type="text" id="recommendation" class="form-input" placeholder="如：曼联-0.5、大2.5球..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">参考赔率</label>
+                            <input type="text" id="odds" class="form-input" placeholder="如：0.95、1.85">
+                        </div>
+
+                        <div class="form-group wide">
+                            <label class="form-label">分析思路</label>
+                            <textarea id="analysisText" class="form-input form-textarea" rows="3" placeholder="简述分析依据..."></textarea>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <span class="btn-icon">✚</span>
+                        <span>保存分析记录</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- 待结算 / 历史记录 -->
+    <section id="records" class="records-section">
+        <div class="container">
+            <h2 class="section-title">
+                <span class="title-icon">◈</span>
+                分析记录
+                <span class="title-icon">◈</span>
+            </h2>
+
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="football">⚽ 足球</button>
+                <button class="filter-btn" data-filter="basketball">🏀 篮球</button>
+                <button class="filter-btn" data-filter="pending">⏳ 待结算</button>
+                <button class="filter-btn" data-filter="win">✅ 已命中</button>
+                <button class="filter-btn" data-filter="lose">❌ 未命中</button>
+            </div>
+
+            <!-- 待结算区域 -->
+            <div class="record-section-title">
+                <span class="section-dot pending-dot"></span>
+                待结算分析
+            </div>
+            <div class="record-list" id="pendingList">
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <p>暂无待结算的分析记录</p>
+                    <p class="empty-hint">请在上方录入赛前分析</p>
+                </div>
+            </div>
+
+            <!-- 已结算区域 -->
+            <div class="record-section-title">
+                <span class="section-dot finished-dot"></span>
+                已结算记录
+            </div>
+            <div class="record-list" id="finishedList">
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <p>暂无已结算记录</p>
+                    <p class="empty-hint">比赛结束后输入赛果进行结算</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 联系方式 -->
+    <section id="contact" class="contact-section">
+        <div class="container">
+            <h2 class="section-title dark">
+                <span class="title-icon">◈</span>
+                联系与交流
+                <span class="title-icon">◈</span>
+            </h2>
+
+            <div class="contact-grid">
+                <div class="contact-card wechat-card">
+                    <div class="contact-header">
+                        <span class="contact-icon">💬</span>
+                        <h3>微信联系</h3>
+                    </div>
+                    <div class="qr-container">
+                        <img src="wechat-qr.jpg" alt="微信二维码" class="qr-image">
+                    </div>
+                    <p class="contact-hint">扫描二维码添加微信</p>
+                </div>
+
+                <div class="contact-card qq-card">
+                    <div class="contact-header">
+                        <span class="contact-icon">🐧</span>
+                        <h3>QQ 联系</h3>
+                    </div>
+                    <div class="qq-number">657564332</div>
+                    <button class="copy-btn" data-copy="657564332">
+                        <span>📋</span> 复制号码
+                    </button>
+                    <p class="contact-hint">点击复制QQ号码</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="brand-icon">◆</span>
+                <span>ANALYTICS PRO</span>
+            </div>
+            <p class="footer-text">专业赛事分析 · 数据驱动决策 · 理性投注</p>
+            <p class="footer-disclaimer">本页面仅供个人分析统计使用，不构成任何投注建议</p>
+        </div>
+    </footer>
+
+    <!-- 结算弹窗 -->
+    <div class="modal-overlay" id="resultModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">录入比赛结果</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="match-info" id="modalMatchInfo"></div>
+                <div class="result-options">
+                    <label class="result-label">赛果判定</label>
+                    <div class="result-btns">
+                        <button type="button" class="result-btn win-btn" data-result="win">
+                            <span class="result-icon">✅</span>
+                            <span>命中</span>
+                        </button>
+                        <button type="button" class="result-btn lose-btn" data-result="lose">
+                            <span class="result-icon">❌</span>
+                            <span>未命中</span>
+                        </button>
+                        <button type="button" class="result-btn push-btn" data-result="push">
+                            <span class="result-icon">↩️</span>
+                            <span>走水</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">最终比分</label>
+                    <input type="text" id="finalScore" class="form-input" placeholder="如：2:1、105:98">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-cancel" id="modalCancel">取消</button>
+                <button class="modal-confirm" id="modalConfirm">确认结算</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示 Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
