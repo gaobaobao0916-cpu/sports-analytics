@@ -1,6 +1,6 @@
 // ===== Supabase 配置 =====
 const SUPABASE_URL = 'https://zvrmynxrbfsnejvsxohh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cm15bnhyYmZzbmVqdnN4b2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyMjU1NjAsImV4cCI6MjA2MjgwMTU2MH0.JnsPJ6L9etq6QpQW4ih5Gw_5ksDu4y8eQ8KxKJZKvYk';
+const SUPABASE_KEY = 'sb_publishable_JnsPJ6L9etq6QpQW4ih5Gw_5ksDu4y8';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ===== 应用配置 =====
@@ -22,6 +22,23 @@ function toast(msg) {
 }
 
 // ===== Supabase 数据操作 =====
+// ===== 字段名映射（Supabase返回小写）=====
+function normalizeRecord(r) {
+    return {
+        id: r.id,
+        sport: r.sport || 'football',
+        league: r.league || '',
+        date: r.date || '',
+        match: r.match || '',
+        betType: r.bettype || r.betType || '',
+        recommendation: r.recommendation || '',
+        odds: r.odds || '',
+        analysis: r.analysis || '',
+        result: r.result || null,
+        finalScore: r.finalscore || r.finalScore || null
+    };
+}
+
 async function loadFromCloud() {
     try {
         const { data, error } = await supabase
@@ -30,7 +47,7 @@ async function loadFromCloud() {
             .order('date', { ascending: false });
         
         if (error) throw error;
-        cloudData = data || [];
+        cloudData = (data || []).map(normalizeRecord);
         isLoading = false;
         renderRecords();
         updateStats();
@@ -46,9 +63,24 @@ async function loadFromCloud() {
 
 async function saveToCloud(item) {
     try {
+        // 转换为 Supabase 的小写字段名
+        const cloudItem = {
+            id: item.id,
+            sport: item.sport,
+            league: item.league,
+            date: item.date,
+            match: item.match,
+            bettype: item.betType,
+            recommendation: item.recommendation,
+            odds: item.odds,
+            analysis: item.analysis || null,
+            result: item.result,
+            finalscore: item.finalScore
+        };
+        
         const { error } = await supabase
             .from('analyses')
-            .upsert(item);
+            .upsert(cloudItem);
         
         if (error) throw error;
         await loadFromCloud();
