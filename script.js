@@ -113,6 +113,7 @@ async function deleteFromCloud(id) {
 // ===== 类型映射 =====
 const TYPE_MAP = {
     asia: { label: '亚盘', cls: 'g' },
+    ou_football: { label: '大小球', cls: 'o' },
     lottery: { label: '竞彩', cls: 'b' },
     overunder: { label: '大小分', cls: 'o' },
     handicap: { label: '让球', cls: 'g' }
@@ -145,6 +146,7 @@ function calcStats() {
     
     return { total, winCount, rate, streak, 
         fbAsia: catRate('football', 'asia'),
+        fbOu: catRate('football', 'ou_football'),
         fbLot: catRate('football', 'lottery'),
         bkOu: catRate('basketball', 'overunder'),
         bkHc: catRate('basketball', 'handicap')
@@ -160,6 +162,7 @@ function updateStats() {
     document.getElementById('streakCount').textContent = s.streak;
     
     document.getElementById('fbAsiaRate').textContent = s.fbAsia;
+    document.getElementById('fbOuRate').textContent = s.fbOu;
     document.getElementById('fbLotteryRate').textContent = s.fbLot;
     document.getElementById('bkOuRate').textContent = s.bkOu;
     document.getElementById('bkHandicapRate').textContent = s.bkHc;
@@ -360,8 +363,8 @@ function autoAnalyzeResult(record, score) {
         return 'lose';
     }
     
-    // 大小球：格式 "大X.5" 或 "小X.5"
-    if (record.betType === 'overunder') {
+    // 大小球（篮球大小分 或 足球大小球）
+    if (['overunder', 'ou_football'].includes(record.betType)) {
         const ouMatch = rec.match(/([大小])\s*(\d+\.?\d*)/);
         if (!ouMatch) return null;
         
