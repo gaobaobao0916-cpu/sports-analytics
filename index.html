@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
     <!-- 顶部导航 -->
@@ -19,37 +19,11 @@
         </div>
         <div class="nav-right">
             <a href="#stats" class="nav-btn">数据</a>
+            <a href="#formSection" class="nav-btn">录入</a>
             <a href="#records" class="nav-btn">记录</a>
-            <button class="nav-btn-primary" id="addBtn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                录入分析
-            </button>
             <a href="#contact" class="nav-btn">联系</a>
-            <button class="nav-btn" id="syncBtn" title="数据同步">☁️</button>
         </div>
     </nav>
-
-    <!-- 密码验证弹窗 -->
-    <div class="pwd-modal" id="pwdModal">
-        <div class="pwd-overlay"></div>
-        <div class="pwd-box">
-            <div class="pwd-icon">🔐</div>
-            <h2>验证身份</h2>
-            <p>请输入密码以解锁赛事录入功能</p>
-            <div class="pwd-input-wrap">
-                <input type="password" id="pwdInput" placeholder="输入密码" autocomplete="off">
-                <button class="pwd-submit" id="pwdSubmit">解锁</button>
-            </div>
-            <p class="pwd-error" id="pwdError"></p>
-            <button class="pwd-close" id="pwdClose">取消</button>
-        </div>
-    </div>
-
-    <!-- 已解锁状态 -->
-    <div class="unlocked-bar hidden" id="unlockedBar">
-        <span>✓ 已解锁</span>
-        <button id="lockBtn">锁定</button>
-    </div>
 
     <!-- 主内容 -->
     <main class="main">
@@ -113,7 +87,7 @@
         </section>
 
         <!-- 录入表单 -->
-        <section class="section hidden" id="formSection">
+        <section class="section" id="formSection">
             <div class="container">
                 <h2 class="section-title">录入赛前分析</h2>
                 <div class="form-wrap">
@@ -224,38 +198,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- 同步设置弹窗 -->
-        <div class="modal" id="syncModal">
-            <div class="modal-overlay"></div>
-            <div class="modal-box" style="width:420px;">
-                <div class="modal-head">
-                    <h3>☁️ 数据同步设置</h3>
-                    <button class="modal-x" id="syncClose">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
-                        使用 GitHub Gist 实现多设备数据同步。<br>
-                        首次使用需要创建 Personal Access Token（仅需 gist 权限）。
-                    </p>
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label>GitHub Token</label>
-                        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
-                    </div>
-                    <div class="form-group" style="margin-bottom:16px;">
-                        <label>Gist ID（首次留空自动创建）</label>
-                        <input type="text" id="gistId" placeholder="可选，留空自动创建">
-                    </div>
-                    <div class="sync-status" id="syncStatus" style="font-size:13px;color:var(--text2);margin-bottom:12px;"></div>
-                </div>
-                <div class="modal-foot">
-                    <button class="btn-cancel" id="syncCancel">取消</button>
-                    <button class="btn-confirm" id="syncTest">测试连接</button>
-                    <button class="btn-confirm" id="syncPull">拉取数据</button>
-                    <button class="btn-confirm" id="syncPush">推送数据</button>
-                </div>
-            </div>
-        </div>
     </main>
 
     <!-- 结算弹窗 -->
@@ -288,6 +230,6 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=4"></script>
 </body>
 </html>
