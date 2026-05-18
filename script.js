@@ -1,41 +1,81 @@
-// ===== 配置 =====
+// ===== Supabase 配置 =====
+const SUPABASE_URL = 'https://zvrmynxrbfsnejvsxohh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2cm15bnhyYmZzbmVqdnN4b2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyMjU1NjAsImV4cCI6MjA2MjgwMTU2MH0.JnsPJ6L9etq6QpQW4ih5Gw_5ksDu4y8eQ8KxKJZKvYk';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== 应用配置 =====
 const PASSWORD = '@@bao657564332';
-const STORAGE_KEY = 'sports_analytics_v1';
 
 // ===== 状态 =====
 let editingId = null;
 let currentFilter = 'all';
 let isAdmin = false;
+let cloudData = []; // 云端数据
+let isLoading = true;
 
-// ===== 数据存储 =====
-function getData() {
+// ===== Toast =====
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== Supabase 数据操作 =====
+async function loadFromCloud() {
     try {
-        const local = localStorage.getItem(STORAGE_KEY);
-        const localData = local ? JSON.parse(local) : { analyses: [] };
-        return { analyses: [...localData.analyses] };
-    } catch {
-        return { analyses: [] };
+        const { data, error } = await supabase
+            .from('analyses')
+            .select('*')
+            .order('date', { ascending: false });
+        
+        if (error) throw error;
+        cloudData = data || [];
+        isLoading = false;
+        renderRecords();
+        updateStats();
+    } catch (err) {
+        console.error('加载失败:', err);
+        isLoading = false;
+        cloudData = [];
+        renderRecords();
+        updateStats();
+        toast('加载数据失败');
     }
 }
 
-function saveData(d) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+async function saveToCloud(item) {
+    try {
+        const { error } = await supabase
+            .from('analyses')
+            .upsert(item);
+        
+        if (error) throw error;
+        await loadFromCloud();
+        return true;
+    } catch (err) {
+        console.error('保存失败:', err);
+        toast('保存失败');
+        return false;
+    }
 }
 
-// ===== 从JSON文件加载预置数据 =====
-let defaultData = { analyses: [] };
-fetch('data.json')
-    .then(r => r.json())
-    .then(data => {
-        defaultData = data;
-        renderRecords();
-        updateStats();
-    })
-    .catch(() => {
-        // 加载失败，用空数据
-        renderRecords();
-        updateStats();
-    });
+async function deleteFromCloud(id) {
+    try {
+        const { error } = await supabase
+            .from('analyses')
+            .delete()
+            .eq('id', id);
+        
+        if (error) throw error;
+        await loadFromCloud();
+        return true;
+    } catch (err) {
+        console.error('删除失败:', err);
+        toast('删除失败');
+        return false;
+    }
+}
 
 // ===== 类型映射 =====
 const TYPE_MAP = {
@@ -50,18 +90,9 @@ const SPORT_MAP = {
     basketball: '🏀'
 };
 
-// ===== Toast =====
-function toast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
-}
-
 // ===== 统计 =====
 function calcStats() {
-    const all = getAllAnalyses();
-    const finished = all.filter(a => a.result !== null);
+    const finished = cloudData.filter(a => a.result !== null);
     const wins = finished.filter(a => a.result === 'win');
     const total = finished.length;
     const winCount = wins.length;
@@ -121,20 +152,6 @@ function formatDateTime(dateStr) {
     return `${year}年${month}月${day}日 ${hour}:${min}`;
 }
 
-function getAllAnalyses() {
-    // 合并预置数据 + 本地数据
-    const local = getData().analyses;
-    const preset = defaultData.analyses || [];
-    const all = [...preset];
-    // 本地数据覆盖预置数据
-    local.forEach(a => {
-        const idx = all.findIndex(x => x.id === a.id);
-        if (idx >= 0) all[idx] = a;
-        else all.push(a);
-    });
-    return all;
-}
-
 function createRecHTML(a, pending) {
     const t = TYPE_MAP[a.betType] || { label: a.betType, cls: '' };
     const icon = SPORT_MAP[a.sport] || '📋';
@@ -178,9 +195,16 @@ function createRecHTML(a, pending) {
 }
 
 function renderRecords() {
-    const all = getAllAnalyses();
-    const pending = all.filter(a => a.result === null);
-    const finished = all.filter(a => a.result !== null);
+    if (isLoading) {
+        document.getElementById('pendingList').innerHTML = '<div class="empty">加载中...</div>';
+        document.getElementById('finishedList').innerHTML = '<div class="empty">加载中...</div>';
+        document.getElementById('pendingCount').textContent = '-';
+        document.getElementById('finishedCount').textContent = '-';
+        return;
+    }
+    
+    const pending = cloudData.filter(a => a.result === null);
+    const finished = cloudData.filter(a => a.result !== null);
     
     document.getElementById('pendingCount').textContent = pending.length;
     document.getElementById('finishedCount').textContent = finished.length;
@@ -216,8 +240,7 @@ function bindRecEvents() {
             settleBtn.onclick = (e) => {
                 e.stopPropagation();
                 const id = parseInt(settleBtn.dataset.id);
-                const d = getData();
-                const a = d.analyses.find(x => x.id === id);
+                const a = cloudData.find(x => x.id === id);
                 if (!isMatchStarted(a.date)) {
                     toast('比赛尚未开始');
                     return;
@@ -227,15 +250,11 @@ function bindRecEvents() {
         }
         
         if (deleteBtn) {
-            deleteBtn.onclick = (e) => {
+            deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
                 if (confirm('确定删除？')) {
                     const id = parseInt(deleteBtn.dataset.id);
-                    const d = getData();
-                    d.analyses = d.analyses.filter(a => a.id !== id);
-                    saveData(d);
-                    renderRecords();
-                    updateStats();
+                    await deleteFromCloud(id);
                     toast('已删除');
                 }
             };
@@ -246,8 +265,7 @@ function bindRecEvents() {
 // ===== 结算弹窗 =====
 function openSettleModal(id) {
     editingId = id;
-    const d = getData();
-    const a = d.analyses.find(x => x.id === id);
+    const a = cloudData.find(x => x.id === id);
     if (!a) return;
     
     document.getElementById('modalMatch').innerHTML = 
@@ -264,7 +282,7 @@ function closeSettleModal() {
     editingId = null;
 }
 
-function doSettle() {
+async function doSettle() {
     const active = document.querySelector('.r-btn.active');
     if (!active) {
         toast('请选择结果');
@@ -274,14 +292,11 @@ function doSettle() {
     const result = active.dataset.r;
     const score = document.getElementById('finalScore').value.trim();
     
-    const d = getData();
-    const a = d.analyses.find(x => x.id === editingId);
+    const a = cloudData.find(x => x.id === editingId);
     if (a) {
         a.result = result;
         a.finalScore = score || null;
-        saveData(d);
-        renderRecords();
-        updateStats();
+        await saveToCloud(a);
         toast(result === 'win' ? '🎉 命中！' : result === 'push' ? '走水' : '未命中');
     }
     
@@ -293,7 +308,7 @@ function initForm() {
     document.getElementById('matchDate').valueAsDate = new Date();
     document.getElementById('matchTime').value = '00:00';
     
-    document.getElementById('analysisForm').onsubmit = e => {
+    document.getElementById('analysisForm').onsubmit = async (e) => {
         e.preventDefault();
         
         const league = document.getElementById('league').value.trim();
@@ -315,8 +330,7 @@ function initForm() {
         let sport = 'football';
         if (['overunder', 'handicap'].includes(betType)) sport = 'basketball';
         
-        const d = getData();
-        d.analyses.push({
+        const item = {
             id: Date.now(),
             sport,
             league,
@@ -328,16 +342,15 @@ function initForm() {
             analysis,
             result: null,
             finalScore: null
-        });
-        saveData(d);
+        };
         
-        document.getElementById('analysisForm').reset();
-        document.getElementById('matchDate').valueAsDate = new Date();
-        document.getElementById('matchTime').value = '00:00';
-        
-        renderRecords();
-        updateStats();
-        toast('保存成功');
+        const ok = await saveToCloud(item);
+        if (ok) {
+            document.getElementById('analysisForm').reset();
+            document.getElementById('matchDate').valueAsDate = new Date();
+            document.getElementById('matchTime').value = '00:00';
+            toast('保存成功');
+        }
     };
 }
 
@@ -440,4 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFilters();
     initCopy();
     initAdminMode();
+    
+    // 从云端加载数据
+    loadFromCloud();
 });
