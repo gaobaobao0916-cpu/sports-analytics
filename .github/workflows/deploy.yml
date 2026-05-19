@@ -13,10 +13,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 安装腾讯云 CLI
-        uses: TencentCloud/tencentcloud-cli-action@v1
-        with:
-          secret-id: ${{ secrets.TENCENT_SECRET_ID }}
-          secret-key: ${{ secrets.TENCENT_SECRET_KEY }}
+        run: |
+          curl -sL https://cli.tools.tencentcloud.com/install.sh | bash
+          source ~/.bashrc
+
+      - name: 配置腾讯云凭证
+        run: |
+          tcli configure set secretId ${{ secrets.TENCENT_SECRET_ID }}
+          tcli configure set secretKey ${{ secrets.TENCENT_SECRET_KEY }}
 
       - name: 部署到 EdgeOne Pages
         run: |
