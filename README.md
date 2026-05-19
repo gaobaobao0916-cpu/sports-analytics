@@ -2,7 +2,7 @@
 
 专业足球篮球赛事分析胜率统计平台
 
-**在线访问**: https://gaobaobao0916-cpu.github.io/sports-analytics/
+**在线访问**: https://sports-analytics-pp09ge8eax.edgeone.cool
 
 ## 功能特点
 
