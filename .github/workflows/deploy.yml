@@ -20,4 +20,7 @@ jobs:
 
       - name: 部署到 EdgeOne Pages
         run: |
-          tcli teo DeployZoneConfigVersion --ZoneId "default-pages-zone" --ProjectName "sports-analytics" --DirectoryPath "./"
+          tcli teo DeployZoneConfigVersion \
+            --ZoneId "default-pages-zone" \
+            --ProjectName "sports-analytics" \
+            --DirectoryPath "./"
