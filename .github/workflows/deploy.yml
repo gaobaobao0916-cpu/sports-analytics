@@ -12,11 +12,12 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 部署到 EdgeOne Pages
-        uses: TencentCloud/edgeone-pages-action@v1
+      - name: 安装腾讯云 CLI
+        uses: TencentCloud/tencentcloud-cli-action@v1
         with:
-          secret_id: ${{ secrets.TENCENT_SECRET_ID }}
-          secret_key: ${{ secrets.TENCENT_SECRET_KEY }}
-          zone_name: default-pages-zone
-          project_name: sports-analytics
-          upload_dir: ./
+          secret-id: ${{ secrets.TENCENT_SECRET_ID }}
+          secret-key: ${{ secrets.TENCENT_SECRET_KEY }}
+
+      - name: 部署到 EdgeOne Pages
+        run: |
+          tcli teo DeployZoneConfigVersion --ZoneId "default-pages-zone" --ProjectName "sports-analytics" --DirectoryPath "./"
