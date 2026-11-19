@@ -1,6 +1,6 @@
 {
   "schema_version": "live-results-upstream-1",
-  "generated_at_utc": "2026-11-19T02:07:44.829104+00:00",
+  "generated_at_utc": "2026-11-19T22:37:50.844544+00:00",
   "matches": {
     "7m:5006543": {
       "match_id": "7m:5006543",
@@ -671,8 +671,8 @@
     "7m:5006541": {
       "match_id": "7m:5006541",
       "native_id": 5006541,
-      "state": 3,
-      "final": false,
+      "state": 4,
+      "final": true,
       "home_team": "Gremio FBPA",
       "away_team": "Esporte Clube Bahia",
       "kickoff_utc": "2026-11-19T00:30:00+00:00",
@@ -680,11 +680,65 @@
       "final_away_score": 0,
       "half_time_home_score": 0,
       "half_time_away_score": 0,
-      "fetched_at_utc": "2026-11-19T02:07:43.660429+00:00",
+      "fetched_at_utc": "2026-11-19T22:37:47.241470+00:00",
       "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5006541",
-      "response_sha256": "0f29892825536d0e67bde267c60b6b7b6ea6d2b9821ef5279abd247fdcdc6a47",
-      "response_bytes": 289,
-      "note": "UPSTREAM_NOT_FINAL"
+      "response_sha256": "08b14faa56343612ba27d05d84a6b9d38c64a293f153ed014769986309bba135",
+      "response_bytes": 283,
+      "note": null
+    },
+    "7m:5195395": {
+      "match_id": "7m:5195395",
+      "native_id": 5195395,
+      "state": 4,
+      "final": true,
+      "home_team": "Technico FF",
+      "away_team": "Kickstart FC Karnataka",
+      "kickoff_utc": "2026-11-19T07:55:00+00:00",
+      "final_home_score": 1,
+      "final_away_score": 4,
+      "half_time_home_score": 0,
+      "half_time_away_score": 1,
+      "fetched_at_utc": "2026-11-19T22:37:49.347490+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5195395",
+      "response_sha256": "b334af35a750e2238235d8f245eed649e98be0ed770b322af09c59ad138d1719",
+      "response_bytes": 291,
+      "note": null
+    },
+    "7m:5191833": {
+      "match_id": "7m:5191833",
+      "native_id": 5191833,
+      "state": 4,
+      "final": true,
+      "home_team": "Queensland Lions FC",
+      "away_team": "Wollongong Wolves",
+      "kickoff_utc": "2026-11-19T08:30:00+00:00",
+      "final_home_score": 1,
+      "final_away_score": 1,
+      "half_time_home_score": 0,
+      "half_time_away_score": 0,
+      "fetched_at_utc": "2026-11-19T22:37:49.853447+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5191833",
+      "response_sha256": "e6bd64baf2405f60529f7b14d6ed4b351b75661ad20a1b55d55349df74d31100",
+      "response_bytes": 311,
+      "note": null
+    },
+    "7m:5188342": {
+      "match_id": "7m:5188342",
+      "native_id": 5188342,
+      "state": 4,
+      "final": true,
+      "home_team": "Baniyas(U21)",
+      "away_team": "Al Oruba (U21)",
+      "kickoff_utc": "2026-11-19T12:45:00+00:00",
+      "final_home_score": 1,
+      "final_away_score": 2,
+      "half_time_home_score": 0,
+      "half_time_away_score": 1,
+      "fetched_at_utc": "2026-11-19T22:37:50.342234+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5188342",
+      "response_sha256": "2df246783d2dce6535fdf011f6395843c1ade26de81ae0ab138931123f60c8e3",
+      "response_bytes": 267,
+      "note": null
     }
   },
   "source": {
