@@ -1,6 +1,6 @@
 {
   "schema_version": "live-results-upstream-1",
-  "generated_at_utc": "2026-11-19T01:20:09.543987+00:00",
+  "generated_at_utc": "2026-11-19T02:07:44.829104+00:00",
   "matches": {
     "7m:5006543": {
       "match_id": "7m:5006543",
@@ -667,6 +667,24 @@
       "response_sha256": "6aeea15573f14636aad31e1ed03a2919bda97113cde750a59420e7fae90e22bd",
       "response_bytes": 271,
       "note": null
+    },
+    "7m:5006541": {
+      "match_id": "7m:5006541",
+      "native_id": 5006541,
+      "state": 3,
+      "final": false,
+      "home_team": "Gremio FBPA",
+      "away_team": "Esporte Clube Bahia",
+      "kickoff_utc": "2026-11-19T00:30:00+00:00",
+      "final_home_score": 0,
+      "final_away_score": 0,
+      "half_time_home_score": 0,
+      "half_time_away_score": 0,
+      "fetched_at_utc": "2026-11-19T02:07:43.660429+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5006541",
+      "response_sha256": "0f29892825536d0e67bde267c60b6b7b6ea6d2b9821ef5279abd247fdcdc6a47",
+      "response_bytes": 289,
+      "note": "UPSTREAM_NOT_FINAL"
     }
   },
   "source": {
