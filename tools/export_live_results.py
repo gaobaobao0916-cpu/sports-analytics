@@ -335,6 +335,16 @@ def main(argv=None):
     records = [r for r in records
                if _local(r["push_sent_at_utc"]).date().isoformat() >= (args.since or "0000-00-00")]
 
+    # 统计口径：小球不统计；同一场比赛只保留最早触发的那一次提醒。
+    under_excluded = [r for r in records
+                      if "UNDER" in str(r.get("signal_type") or "").upper()]
+    records = [r for r in records if r not in under_excluded]
+    earliest = {}
+    for record in sorted(records, key=lambda r: r["push_sent_at_utc"]):
+        earliest.setdefault(record["match_id"], record)
+    duplicate_excluded = len(records) - len(earliest)
+    records = list(earliest.values())
+
     out = Path(args.out)
     cache_path = out / "upstream_finals.json"
     cache = {"schema_version": FINAL_SCHEMA, "generated_at_utc": None, "matches": {}}
@@ -399,6 +409,8 @@ def main(argv=None):
         "db": args.db, "out": str(out), "date_filter": args.date, "since": args.since,
         "archived_total": len(archives),
         "delivered_total": len(records),
+        "under_excluded_total": len(under_excluded),
+        "duplicate_excluded_total": duplicate_excluded,
         "unconfirmed_total": len(unconfirmed),
         "unconfirmed_archive_ids": unconfirmed,
         "days": {d: len(v) for d, v in sorted(by_day.items())},
