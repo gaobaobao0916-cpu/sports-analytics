@@ -50,13 +50,12 @@ sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
 
 仅 `queued` 而无客户端回执的推送记为 `UNCONFIRMED`，写入运行摘要的 `unconfirmed_archive_ids`，**不进入公开页面**，需人工审计。
 
-## 6. 当前阻塞状态
+## 6. 终场补足与结果核对
 
-`result_status` 中所有记录为 `PENDING`，`blocking = NO_FINAL_SCORE_SOURCE`：
-
-- V4 当前没有可追溯的终场比分来源（`fixture_outcomes` 仅有半场记录）。
-- 因此不会安装定时任务、不会推送「命中」或「未命中」结论。
-- 终场来源补齐后，只需在导出器中接入该来源并重算 `full_time_goals / goals_after_push / goal_result_status`，页面无需改动即可展示印章。
+- 导出器逐场请求 7M 同源 `footballMatch/matchInfo`，仅 `state=4` 视为终场。
+- 全场比分取 `match.11.4 / match.12.4`，半场比分取 `match.11.5 / match.12.5`；protobuf 省略的比分子字段按 0 解释，因此 0-0 可正常结算。
+- 已确认终场的比赛缓存在 `upstream_finals.json`，后续运行不重复请求；未完场记录保持 `PENDING` 并在下轮重试。
+- 推送后新增进球大于等于 1 为 `HIT`，等于 0 为 `MISS`，比分回退或关键数据缺失为 `REVIEW`，不会把 NULL 当成 0。
 
 ## 7. 本地预览
 
@@ -71,11 +70,44 @@ python -m http.server 8123 --bind 127.0.0.1
 ## 8. 发布
 
 - 目标站点：`https://gaobaobao0916-cpu.github.io/sports-analytics/`，来源为 Pages `master` 根目录。
-- 仓库另有 EdgeOne 工作流，`master` push 会同时触发。
-- 本次改动仅在 `feature/live-push-results-center` 分支，未推 `master`，不会触发任何发布链。
-- 合并前需人工确认页面与数据后再决定发布时机。
+- 数据更新通过功能分支和 PR 合并发布，不直接推送 `master`。
+- 仓库另有 EdgeOne 工作流，`master` push 会同时触发；GitHub Pages 状态以 `pages-build-deployment` 工作流为准。
 
-## 9. 故障处理
+## 9. 每日自动更新
+
+`tools/publish_live_results.ps1` 在独立 bot 克隆中执行导出和 Node 测试，只有 `data/live-results/` 存在差异时才提交，并自动创建、合并 PR。命名 Mutex 防止重入，日志写入 `e:\V4\v4\live-results-work\logs`。
+
+首次安装：
+
+```powershell
+git clone https://github.com/gaobaobao0916-cpu/sports-analytics.git e:\V4\v4\sports-analytics-bot
+gh auth status
+
+$repo = 'e:\V4\v4\sports-analytics-bot'
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+  -Argument '-NoProfile -ExecutionPolicy Bypass -File "e:\V4\v4\sports-analytics-bot\tools\publish_live_results.ps1"' `
+  -WorkingDirectory $repo
+$triggers = @(
+  (New-ScheduledTaskTrigger -Daily -At '08:00'),
+  (New-ScheduledTaskTrigger -Daily -At '20:00')
+)
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
+Register-ScheduledTask -TaskName 'LiveOU Live Results Auto Publish' -Action $action -Trigger $triggers -Principal $principal -Settings $settings -Force
+```
+
+任务每天北京时间 08:00、20:00 运行，电脑开机且当前用户已登录时生效。手动试跑与状态检查：
+
+```powershell
+cd e:\V4\v4\sports-analytics-bot
+python tools\export_live_results.py --dry-run
+Start-ScheduledTask -TaskName 'LiveOU Live Results Auto Publish'
+Get-ScheduledTaskInfo -TaskName 'LiveOU Live Results Auto Publish'
+```
+
+若任务失败，先查看最新 `publish-*.log` 和 `export-*.json`。脚本为避免覆盖改动会在 bot 工作区不干净时停止；不要向 bot 克隆手工写入文件。
+
+## 10. 故障处理
 
 | 现象 | 处理 |
 |---|---|
