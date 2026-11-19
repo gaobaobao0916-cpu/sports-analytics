@@ -75,7 +75,7 @@ python -m http.server 8123 --bind 127.0.0.1
 
 ## 9. 每日自动更新
 
-`tools/publish_live_results.ps1` 在独立 bot 克隆中执行导出和 Node 测试，只有 `data/live-results/` 存在差异时才提交，并自动创建、合并 PR。命名 Mutex 防止重入，日志写入 `e:\V4\v4\live-results-work\logs`。
+`tools/publish_live_results.ps1` 在独立 bot 克隆中执行导出和 Node 测试，只有 `data/live-results/` 存在差异时才提交，并自动创建、合并 PR。`tools/live_results_scheduler.ps1` 是免管理员的常驻调度器，两个脚本分别使用命名 Mutex 防止重入，日志写入 `e:\V4\v4\live-results-work\logs`。
 
 首次安装：
 
@@ -84,28 +84,39 @@ git clone https://github.com/gaobaobao0916-cpu/sports-analytics.git e:\V4\v4\spo
 gh auth status
 
 $repo = 'e:\V4\v4\sports-analytics-bot'
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-  -Argument '-NoProfile -ExecutionPolicy Bypass -File "e:\V4\v4\sports-analytics-bot\tools\publish_live_results.ps1"' `
-  -WorkingDirectory $repo
-$triggers = @(
-  (New-ScheduledTaskTrigger -Daily -At '08:00'),
-  (New-ScheduledTaskTrigger -Daily -At '20:00')
+$scheduler = Join-Path $repo 'tools\live_results_scheduler.ps1'
+$startup = [Environment]::GetFolderPath('Startup')
+$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut(
+  (Join-Path $startup 'LiveOU Live Results Scheduler.lnk')
 )
-$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
-Register-ScheduledTask -TaskName 'LiveOU Live Results Auto Publish' -Action $action -Trigger $triggers -Principal $principal -Settings $settings -Force
+$shortcut.TargetPath = "$PSHOME\powershell.exe"
+$shortcut.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scheduler`""
+$shortcut.WorkingDirectory = $repo
+$shortcut.Save()
 ```
 
-任务每天北京时间 08:00、20:00 运行，电脑开机且当前用户已登录时生效。手动试跑与状态检查：
+调度器在当前用户登录时由启动项加载，每天北京时间 08:00、20:00 运行；电脑进入睡眠而错过时间时，会在唤醒后补跑。电脑未开机或用户未登录时不运行，无需管理员权限。
+
+本次立即启动并完整试跑一次：
+
+```powershell
+$command = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scheduler`" -RunNow"
+$result = ([WmiClass]'Win32_Process').Create($command)
+$result.ProcessId
+```
+
+日常检查：
 
 ```powershell
 cd e:\V4\v4\sports-analytics-bot
 python tools\export_live_results.py --dry-run
-Start-ScheduledTask -TaskName 'LiveOU Live Results Auto Publish'
-Get-ScheduledTaskInfo -TaskName 'LiveOU Live Results Auto Publish'
+Get-Content e:\V4\v4\live-results-work\logs\scheduler.log -Tail 20
+Get-ChildItem e:\V4\v4\live-results-work\logs\publish-*.log |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
 ```
 
-若任务失败，先查看最新 `publish-*.log` 和 `export-*.json`。脚本为避免覆盖改动会在 bot 工作区不干净时停止；不要向 bot 克隆手工写入文件。
+若任务失败，先查看 `scheduler.log`、最新 `publish-*.log` 和 `export-*.json`。脚本为避免覆盖改动会在 bot 工作区不干净时停止；不要向 bot 克隆手工写入文件。重新登录会自动恢复调度器，无需重复创建启动项。
 
 ## 10. 故障处理
 
