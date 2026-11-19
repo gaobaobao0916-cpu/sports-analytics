@@ -1,626 +1,570 @@
-// ===== Supabase 配置 =====
-import { createClient } from '@supabase/supabase-js';
+import {
+  beijingClock,
+  beijingDate,
+  dedupeByPushId,
+  matchesFilter,
+  matchesQuery,
+  rowViewModel,
+  summarize,
+  weekdayCN,
+} from './live-results-core.js';
 
-const SUPABASE_URL = 'https://zvrmynxrbfsnejvsxohh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_JnsPJ6L9etq6QpQW4ih5Gw_5ksDu4y8';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const INDEX_PATH = 'data/live-results/index.json';
+const LAST_SUCCESS_KEY = 'liveResultsLastSuccessAt';
 
-// ===== 应用配置 =====
-const PASSWORD = '@@bao657564332';
+const TABLE_COLUMNS = [
+  { label: '推送时间', className: 'col-time' },
+  { label: '级别' },
+  { label: '类型', className: 'col-type' },
+  { label: '比赛', className: 'col-match' },
+  { label: '联赛', className: 'col-league' },
+  { label: '推送时分 / 比分', className: 'col-minute num' },
+  { label: '推送盘口', className: 'col-line num' },
+  { label: '终场比分', className: 'col-score num' },
+  { label: '半场比分', className: 'col-score num' },
+  { label: '模型分', className: 'col-model num' },
+  { label: '内容性质', className: 'col-class' },
+  { label: '全场总进球', className: 'col-goals num' },
+  { label: '推送后新增进球', className: 'col-goals num' },
+  { label: '进球结果', className: 'col-result' },
+];
 
-// ===== 状态 =====
-let editingId = null;
-let currentFilter = 'all';
-let isAdmin = false;
-let cloudData = []; // 云端数据
-let isLoading = true;
-
-// ===== Toast =====
-function toast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-// ===== 字段名映射（Supabase返回小写）=====
-function normalizeRecord(r) {
-    return {
-        id: r.id,
-        sport: r.sport || 'football',
-        league: r.league || '',
-        date: r.date || '',
-        match: r.match || '',
-        betType: r.bettype || r.betType || '',
-        recommendation: r.recommendation || '',
-        odds: r.odds || '',
-        analysis: r.analysis || '',
-        result: r.result || null,
-        finalScore: r.finalscore || r.finalScore || null
-    };
-}
-
-// ===== Supabase 数据操作 =====
-async function loadFromCloud() {
-    try {
-        const { data, error } = await supabase
-            .from('analyses')
-            .select('*')
-            .order('date', { ascending: false });
-        
-        if (error) throw error;
-        cloudData = (data || []).map(normalizeRecord);
-        isLoading = false;
-        renderRecords();
-        updateStats();
-    } catch (err) {
-        console.error('加载失败:', err);
-        isLoading = false;
-        cloudData = [];
-        renderRecords();
-        updateStats();
-        toast('加载数据失败');
-    }
-}
-
-async function saveToCloud(item) {
-    try {
-        const cloudItem = {
-            id: item.id,
-            sport: item.sport,
-            league: item.league,
-            date: item.date,
-            match: item.match,
-            bettype: item.betType,
-            recommendation: item.recommendation,
-            odds: item.odds,
-            analysis: item.analysis || null,
-            result: item.result,
-            finalscore: item.finalScore
-        };
-        
-        const { error } = await supabase
-            .from('analyses')
-            .upsert(cloudItem);
-        
-        if (error) throw error;
-        await loadFromCloud();
-        return true;
-    } catch (err) {
-        console.error('保存失败:', err);
-        toast('保存失败');
-        return false;
-    }
-}
-
-async function deleteFromCloud(id) {
-    try {
-        const { error } = await supabase
-            .from('analyses')
-            .delete()
-            .eq('id', id);
-        
-        if (error) throw error;
-        await loadFromCloud();
-        return true;
-    } catch (err) {
-        console.error('删除失败:', err);
-        toast('删除失败');
-        return false;
-    }
-}
-
-// ===== 类型映射 =====
-const TYPE_MAP = {
-    asia: { label: '亚盘', cls: 'g' },
-    ou_football: { label: '大小球', cls: 'o' },
-    lottery: { label: '竞彩', cls: 'b' },
-    overunder: { label: '大小分', cls: 'o' },
-    handicap: { label: '让球', cls: 'g' }
+const HTML_ESCAPES = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
 };
 
-const SPORT_MAP = {
-    football: '⚽',
-    basketball: '🏀'
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+}
+
+function readStoredLastSuccess() {
+  try {
+    return localStorage.getItem(LAST_SUCCESS_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+const elements = {
+  lastUpdated: document.getElementById('lastUpdated'),
+  errorBanner: document.getElementById('errorBanner'),
+  lastSuccessAt: document.getElementById('lastSuccessAt'),
+  loadedNote: document.getElementById('loadedNote'),
+  statPushTotal: document.getElementById('statPushTotal'),
+  statFormal: document.getElementById('statFormal'),
+  statSoft: document.getElementById('statSoft'),
+  statHit: document.getElementById('statHit'),
+  statHitRate: document.getElementById('statHitRate'),
+  statPending: document.getElementById('statPending'),
+  archiveList: document.getElementById('archiveList'),
+  emptyState: document.getElementById('emptyState'),
+  emptyStateText: document.getElementById('emptyStateText'),
+  searchInput: document.getElementById('searchInput'),
+  filterButtons: Array.from(document.querySelectorAll('.filter-btn')),
 };
 
-// ===== 统计 =====
-function calcStats() {
-    const finished = cloudData.filter(a => a.result !== null);
-    const wins = finished.filter(a => a.result === 'win');
-    const total = finished.length;
-    const winCount = wins.length;
-    const rate = total > 0 ? Math.round(winCount / total * 100) : 0;
-    
-    let streak = 0;
-    [...finished].sort((a, b) => b.id - a.id).forEach(a => {
-        if (a.result === 'win') streak++;
-        else return;
-    });
-    
-    function catRate(sport, type) {
-        const items = finished.filter(a => a.sport === sport && a.betType === type);
-        if (!items.length) return '--';
-        return Math.round(items.filter(a => a.result === 'win').length / items.length * 100) + '%';
-    }
-    
-    return { total, winCount, rate, streak, 
-        fbAsia: catRate('football', 'asia'),
-        fbOu: catRate('football', 'ou_football'),
-        fbLot: catRate('football', 'lottery'),
-        bkOu: catRate('basketball', 'overunder'),
-        bkHc: catRate('basketball', 'handicap')
-    };
+const state = {
+  index: null,
+  days: [],
+  loaded: new Map(),
+  loading: new Map(),
+  dayErrors: new Map(),
+  dayElements: new Map(),
+  expandedDate: null,
+  filter: 'all',
+  query: '',
+  indexError: false,
+  bulkLoading: false,
+  lastSuccessAt: readStoredLastSuccess(),
+};
+
+let searchTimer = null;
+
+function formatBeijingMinute(iso) {
+  const date = beijingDate(iso);
+  const clock = beijingClock(iso);
+  return date && clock ? `${date} ${clock.slice(0, 5)}` : '—';
 }
 
-function updateStats() {
-    const s = calcStats();
-    
-    document.getElementById('totalCount').textContent = s.total;
-    document.getElementById('winCount').textContent = s.winCount;
-    document.getElementById('winRate').textContent = s.rate + '%';
-    document.getElementById('streakCount').textContent = s.streak;
-    
-    document.getElementById('fbAsiaRate').textContent = s.fbAsia;
-    document.getElementById('fbOuRate').textContent = s.fbOu;
-    document.getElementById('fbLotteryRate').textContent = s.fbLot;
-    document.getElementById('bkOuRate').textContent = s.bkOu;
-    document.getElementById('bkHandicapRate').textContent = s.bkHc;
+function isValidDateString(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-// ===== 比赛状态计算 =====
-function getMatchStatus(dateStr, sport) {
-    if (!dateStr) return { text: '未开赛', cls: 'o', started: false, ended: false };
-    
-    const matchTime = new Date(dateStr);
-    const now = new Date();
-    
-    // 足球约120分钟（90+中场15+伤停补时）
-    // 篮球约150分钟（48分钟+暂停/节间休息，NBA更久）
-    const duration = sport === 'basketball' ? 150 * 60 * 1000 : 120 * 60 * 1000;
-    const endTime = new Date(matchTime.getTime() + duration);
-    
-    if (now < matchTime) {
-        return { text: '未开赛', cls: 'o', started: false, ended: false };
-    } else if (now < endTime) {
-        return { text: '正在进行中', cls: 'g', started: true, ended: false };
-    } else {
-        return { text: '已结束', cls: '', started: true, ended: true };
-    }
+function timestamp(value) {
+  const time = Date.parse(value || '');
+  return Number.isNaN(time) ? 0 : time;
 }
 
-function isMatchStarted(dateStr) {
-    if (!dateStr) return false;
-    const matchTime = new Date(dateStr);
-    const now = new Date();
-    return now >= matchTime;
+function isFilterActive() {
+  return state.filter !== 'all' || state.query.trim() !== '';
 }
 
-function formatDateTime(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hour = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${year}年${month}月${day}日 ${hour}:${min}`;
+function recordMatches(record) {
+  return matchesFilter(record, state.filter) && matchesQuery(record, state.query);
 }
 
-function createRecHTML(a, pending) {
-    const t = TYPE_MAP[a.betType] || { label: a.betType, cls: '' };
-    const icon = SPORT_MAP[a.sport] || '📋';
-    const dateTime = a.date ? formatDateTime(a.date) : '';
-    const status = getMatchStatus(a.date, a.sport);
-    const rec = a.recommendation || '';
-    const odds = a.odds || '';
-    
-    let badge = '';
-    if (!pending && a.result) {
-        const txt = a.result === 'win' ? '命中' : a.result === 'lose' ? '未中' : '走水';
-        badge = `<span class="rec-badge ${a.result}">${txt}</span>`;
+function getLoadedRecords() {
+  const all = [];
+  for (const day of state.days) {
+    const records = state.loaded.get(day.date);
+    if (records) all.push(...records);
+  }
+  return dedupeByPushId(all);
+}
+
+function markSuccess() {
+  const now = new Date().toISOString();
+  state.lastSuccessAt = now;
+  try {
+    localStorage.setItem(LAST_SUCCESS_KEY, now);
+  } catch (error) {
+    // localStorage 不可用时仅保留内存态，不影响页面。
+  }
+}
+
+function updateLastUpdated(iso) {
+  const text = iso ? formatBeijingMinute(iso) : '—';
+  elements.lastUpdated.textContent = text;
+  if (iso && text !== '—') {
+    elements.lastUpdated.setAttribute('datetime', iso);
+  } else {
+    elements.lastUpdated.removeAttribute('datetime');
+  }
+}
+
+async function fetchJSON(path) {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+function renderError() {
+  const lastSuccess = state.lastSuccessAt || readStoredLastSuccess();
+  elements.lastSuccessAt.textContent = `上次成功加载：${lastSuccess ? formatBeijingMinute(lastSuccess) : '—'}`;
+  elements.errorBanner.hidden = !(state.indexError || state.dayErrors.size > 0);
+}
+
+function summarizeIndexDays(days) {
+  const summary = {
+    push_total: 0,
+    formal: 0,
+    soft: 0,
+    settled: 0,
+    hit: 0,
+    miss: 0,
+    pending: 0,
+    review: 0,
+    abnormal: 0,
+  };
+  for (const day of days) {
+    for (const key of Object.keys(summary)) {
+      summary[key] += Number(day[key]) || 0;
     }
-    
-    let actions = '';
-    if (isAdmin) {
-        actions = `
-            <div class="rec-actions">
-                ${pending ? `<button class="rec-btn settle" data-id="${a.id}">结算</button>` : ''}
-                <button class="rec-btn delete" data-id="${a.id}">删除</button>
-            </div>
-        `;
-    }
-    
-    // 状态标签：未开赛/进行中/已结束
-    let statusTag = '';
-    if (pending) {
-        statusTag = `<span class="rec-tag ${status.cls}">${status.text}</span>`;
-    }
-    
-    return `
-        <div class="rec-card">
-            <div class="rec-icon">${icon}</div>
-            <div class="rec-info">
-                <div class="rec-match">${icon} ${a.match || '未命名'}</div>
-                <div class="rec-meta">
-                    <span class="rec-tag ${t.cls}">${t.label}</span>
-                    <span class="rec-date">${a.league} · ${dateTime}</span>
-                    ${statusTag}
-                </div>
-                ${rec ? `<div class="rec-recommendation">推荐：${rec}${odds ? ' @' + odds : ''}</div>` : ''}
-                ${a.finalScore ? `<div class="rec-score">最终比分：${a.finalScore}</div>` : ''}
-            </div>
-            ${badge}
-            ${actions}
-        </div>
+  }
+  const denominator = summary.hit + summary.miss;
+  return {
+    ...summary,
+    hit_rate: denominator ? Math.round((summary.hit / denominator) * 10000) / 10000 : null,
+    hit_rate_denominator: denominator,
+  };
+}
+
+function renderStats() {
+  if (!state.index || state.indexError) {
+    setStatText('—', '—', '—', '—', '—', '—');
+    elements.loadedNote.textContent = '';
+    return;
+  }
+
+  if (state.days.length === 0) {
+    setStatText('0', '0', '0', '0', '—', '0');
+    elements.loadedNote.textContent = '暂无归档数据';
+    return;
+  }
+
+  const filterActive = isFilterActive();
+  if (filterActive && state.loaded.size === 0) {
+    setStatText('—', '—', '—', '—', '—', '—');
+    elements.loadedNote.textContent = '正在加载归档数据…';
+    return;
+  }
+
+  const useIndexTotals = !filterActive && state.loaded.size < state.days.length;
+  const loadedRecords = useIndexTotals ? [] : getLoadedRecords();
+  const filteredRecords = useIndexTotals ? [] : loadedRecords.filter(recordMatches);
+  const summary = useIndexTotals ? summarizeIndexDays(state.days) : summarize(filteredRecords);
+
+  setStatText(
+    String(summary.push_total),
+    String(summary.formal),
+    String(summary.soft),
+    String(summary.hit),
+    summary.hit_rate_denominator ? `${(summary.hit_rate * 100).toFixed(1)}%` : '—',
+    String(summary.pending)
+  );
+
+  const totalPush = state.days.reduce((sum, day) => sum + (Number(day.push_total) || 0), 0);
+
+  if (useIndexTotals) {
+    let note = `共 ${state.days.length} 天 · ${summary.push_total} 条记录`;
+    note += state.loaded.size === 0 ? ' · 正在加载最新日期明细…' : ` · 已加载 ${state.loaded.size} 天明细`;
+    elements.loadedNote.textContent = note;
+    return;
+  }
+
+  let note = `已加载 ${state.loaded.size} / ${state.days.length} 天 · ${loadedRecords.length} / ${totalPush} 条记录`;
+  if (filterActive) note += ` · 当前匹配 ${filteredRecords.length} 条`;
+  if (state.bulkLoading) note += ' · 正在加载其余日期…';
+  elements.loadedNote.textContent = note;
+}
+
+function setStatText(pushTotal, formal, soft, hit, hitRate, pending) {
+  elements.statPushTotal.textContent = pushTotal;
+  elements.statFormal.textContent = formal;
+  elements.statSoft.textContent = soft;
+  elements.statHit.textContent = hit;
+  elements.statHitRate.textContent = hitRate;
+  elements.statPending.textContent = pending;
+}
+
+function buildArchive() {
+  elements.archiveList.innerHTML = '';
+  state.dayElements.clear();
+
+  for (const day of state.days) {
+    const card = document.createElement('section');
+    card.className = 'day-card';
+    card.dataset.date = day.date;
+
+    const bodyId = `day-body-${day.date}`;
+    const pushTotal = Number(day.push_total) || 0;
+    const formal = Number(day.formal) || 0;
+    const soft = Number(day.soft) || 0;
+    const settled = Number(day.settled) || 0;
+    const weekday = weekdayCN(day.date) || '—';
+
+    card.innerHTML = `
+      <button type="button" class="day-head" aria-expanded="false" aria-controls="${bodyId}">
+        <span class="day-date-block">
+          <span class="day-date">${escapeHtml(day.date)}</span>
+          <span class="day-weekday">${escapeHtml(weekday)}</span>
+        </span>
+        <span class="day-metrics">
+          <span class="day-metric"><b>${pushTotal}</b> 推送</span>
+          <span class="day-metric"><i class="dot dot-formal" aria-hidden="true"></i>强提醒 <b>${formal}</b></span>
+          <span class="day-metric"><i class="dot dot-soft" aria-hidden="true"></i>软提醒 <b>${soft}</b></span>
+          <span class="day-metric">已完场 <b>${settled}</b>/${pushTotal}</span>
+        </span>
+        <span class="chevron" aria-hidden="true"></span>
+      </button>
+      <div class="day-body" id="${bodyId}" hidden></div>
     `;
+
+    const head = card.querySelector('.day-head');
+    const body = card.querySelector('.day-body');
+    head.addEventListener('click', () => toggleDay(day.date));
+
+    elements.archiveList.appendChild(card);
+    state.dayElements.set(day.date, { card, head, body });
+  }
 }
 
-function renderRecords() {
-    if (isLoading) {
-        document.getElementById('pendingList').innerHTML = '<div class="empty">加载中...</div>';
-        document.getElementById('finishedList').innerHTML = '<div class="empty">加载中...</div>';
-        document.getElementById('pendingCount').textContent = '-';
-        document.getElementById('finishedCount').textContent = '-';
-        return;
-    }
-    
-    const pending = cloudData.filter(a => a.result === null);
-    const finished = cloudData.filter(a => a.result !== null);
-    
-    document.getElementById('pendingCount').textContent = pending.length;
-    document.getElementById('finishedCount').textContent = finished.length;
-    
-    function filter(list) {
-        if (currentFilter === 'all') return list;
-        if (currentFilter === 'pending') return list.filter(a => a.result === null);
-        if (currentFilter === 'win') return list.filter(a => a.result === 'win');
-        if (currentFilter === 'lose') return list.filter(a => a.result === 'lose');
-        return list.filter(a => a.sport === currentFilter);
-    }
-    
-    const pList = document.getElementById('pendingList');
-    const fList = document.getElementById('finishedList');
-    
-    pList.innerHTML = filter(pending).length 
-        ? filter(pending).map(a => createRecHTML(a, true)).join('')
-        : '<div class="empty">暂无待结算记录</div>';
-    
-    fList.innerHTML = filter(finished).length 
-        ? filter(finished).map(a => createRecHTML(a, false)).join('')
-        : '<div class="empty">暂无已结算记录</div>';
-    
-    bindRecEvents();
+function showEmpty(show, text) {
+  elements.emptyState.hidden = !show;
+  if (show) elements.emptyStateText.textContent = text;
 }
 
-function bindRecEvents() {
-    document.querySelectorAll('.rec-card').forEach(card => {
-        const settleBtn = card.querySelector('.rec-btn.settle');
-        const deleteBtn = card.querySelector('.rec-btn.delete');
-        
-        if (settleBtn) {
-            settleBtn.onclick = (e) => {
-                e.stopPropagation();
-                const id = parseInt(settleBtn.dataset.id);
-                const a = cloudData.find(x => x.id === id);
-                if (!isMatchStarted(a.date)) {
-                    toast('比赛尚未开始');
-                    return;
-                }
-                openSettleModal(id);
-            };
-        }
-        
-        if (deleteBtn) {
-            deleteBtn.onclick = async (e) => {
-                e.stopPropagation();
-                if (confirm('确定删除？')) {
-                    const id = parseInt(deleteBtn.dataset.id);
-                    await deleteFromCloud(id);
-                    toast('已删除');
-                }
-            };
-        }
+function renderArchive() {
+  if (!state.index || state.indexError) {
+    elements.archiveList.innerHTML = '';
+    state.dayElements.clear();
+    showEmpty(false, '');
+    return;
+  }
+
+  if (state.days.length === 0) {
+    elements.archiveList.innerHTML = '';
+    state.dayElements.clear();
+    showEmpty(true, '暂无归档数据');
+    return;
+  }
+
+  const filterActive = isFilterActive();
+  let visibleCount = 0;
+
+  for (const day of state.days) {
+    const entry = state.dayElements.get(day.date);
+    if (!entry) continue;
+
+    const records = state.loaded.get(day.date);
+    const loading = state.loading.has(day.date);
+    const failed = state.dayErrors.has(day.date);
+
+    let visible = true;
+    if (records) {
+      if (records.length === 0 && !filterActive) visible = false;
+      if (filterActive && !records.some(recordMatches)) visible = false;
+    }
+
+    entry.card.hidden = !visible;
+    if (visible) visibleCount += 1;
+
+    const expanded = visible && state.expandedDate === day.date;
+    entry.head.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    entry.body.hidden = !expanded;
+
+    if (!expanded) {
+      entry.body.innerHTML = '';
+      continue;
+    }
+
+    if (loading) {
+      entry.body.innerHTML = '<div class="day-loading">正在加载当日记录…</div>';
+      continue;
+    }
+
+    if (failed) {
+      entry.body.innerHTML = `
+        <div class="day-error">
+          <span>该日数据加载失败，请稍后重试</span>
+          <button type="button" class="retry-btn" data-retry-date="${escapeHtml(day.date)}">重新加载</button>
+        </div>
+      `;
+      continue;
+    }
+
+    if (!records) {
+      entry.body.innerHTML = '<div class="day-loading">等待加载…</div>';
+      continue;
+    }
+
+    const rows = records.filter(recordMatches);
+    if (rows.length === 0) {
+      entry.body.innerHTML = '<div class="day-empty">当前筛选条件下没有记录</div>';
+      continue;
+    }
+
+    entry.body.innerHTML = tableHTML(day, rows);
+  }
+
+  if (visibleCount === 0) {
+    showEmpty(true, filterActive ? '当前筛选条件下没有记录' : '暂无归档数据');
+  } else {
+    showEmpty(false, '');
+  }
+}
+
+function tableHTML(day, records) {
+  const head = TABLE_COLUMNS.map((column) => {
+    const className = column.className ? ` class="${column.className}"` : '';
+    return `<th scope="col"${className}>${escapeHtml(column.label)}</th>`;
+  }).join('');
+  const body = records.map(rowHTML).join('');
+
+  return `
+    <div class="table-wrap">
+      <table class="records-table">
+        <caption class="sr-only">${escapeHtml(day.date)} 推送记录</caption>
+        <thead><tr>${head}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function rowHTML(record) {
+  const vm = rowViewModel(record);
+  const finalClass = vm.finalIsScore ? 'col-score num score-text' : 'col-score num pending-text';
+
+  return `
+    <tr>
+      <td class="col-time">${escapeHtml(vm.pushTime)}</td>
+      <td><span class="level-badge level-${escapeHtml(vm.levelKey)}">${escapeHtml(vm.level)}</span></td>
+      <td><span class="market-type">${escapeHtml(vm.type)}</span></td>
+      <td class="col-match">${escapeHtml(vm.match)}</td>
+      <td class="col-league">${escapeHtml(vm.league)}</td>
+      <td class="col-minute num">${escapeHtml(vm.pushMoment)}</td>
+      <td class="col-line num">${escapeHtml(vm.marketLine)}</td>
+      <td class="${finalClass}">${escapeHtml(vm.finalScore)}</td>
+      <td class="col-score num">${escapeHtml(vm.halfTimeScore)}</td>
+      <td class="col-model num">${escapeHtml(vm.modelScore)}</td>
+      <td class="col-class">${escapeHtml(vm.recordClass)}</td>
+      <td class="col-goals num">${escapeHtml(vm.fullTimeGoals)}</td>
+      <td class="col-goals num">${escapeHtml(vm.goalsAfterPush)}</td>
+      <td class="result-cell">${resultCellHTML(vm)}</td>
+    </tr>
+  `;
+}
+
+function resultCellHTML(vm) {
+  if (vm.status === 'HIT' || vm.status === 'MISS') {
+    const stampClass = vm.status === 'HIT' ? 'stamp-hit' : 'stamp-miss';
+    return `<span class="stamp-wrap"><span class="stamp ${stampClass}" role="img" aria-label="${escapeHtml(vm.resultLabel)}">${escapeHtml(vm.resultLabel)}</span></span>`;
+  }
+  return `<span class="status-tag">${escapeHtml(vm.resultLabel)}</span>`;
+}
+
+function render() {
+  renderStats();
+  renderArchive();
+  renderError();
+}
+
+function toggleDay(date) {
+  if (state.expandedDate === date) {
+    state.expandedDate = null;
+    renderArchive();
+    return;
+  }
+
+  state.expandedDate = date;
+  renderArchive();
+
+  if (!state.loaded.has(date) && !state.loading.has(date)) {
+    loadDay(date).catch(() => {});
+  }
+}
+
+function loadDay(date) {
+  if (state.loaded.has(date)) return Promise.resolve(state.loaded.get(date));
+  if (state.loading.has(date)) return state.loading.get(date);
+
+  const day = state.days.find((item) => item.date === date);
+  if (!day) return Promise.reject(new Error(`unknown day: ${date}`));
+
+  const promise = fetchJSON(`data/live-results/${day.file}`)
+    .then((payload) => {
+      if (!payload || !Array.isArray(payload.records)) {
+        throw new Error('invalid day payload');
+      }
+      const records = dedupeByPushId(payload.records)
+        .slice()
+        .sort((a, b) => timestamp(b.push_sent_at_utc) - timestamp(a.push_sent_at_utc));
+
+      state.loaded.set(date, records);
+      state.loading.delete(date);
+      state.dayErrors.delete(date);
+      markSuccess();
+      render();
+      return records;
+    })
+    .catch((error) => {
+      state.loading.delete(date);
+      state.dayErrors.set(date, error);
+      render();
+      throw error;
     });
+
+  state.loading.set(date, promise);
+  render();
+  return promise;
 }
 
-// ===== 盘口自动解析 =====
-function autoAnalyzeResult(record, score) {
-    if (!score || !record.recommendation) return null;
-    
-    const [homeGoals, awayGoals] = score.split(/[:：\-]/).map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-    if (homeGoals === undefined || awayGoals === undefined) return null;
-    
-    const rec = record.recommendation.trim();
-    const teams = record.match.split(/\s*vs\s*/i).map(t => t.trim());
-    
-    // 亚盘 / 让球：格式 "球队名-盘口" 或 "球队名+盘口"
-    if (['asia', 'handicap'].includes(record.betType)) {
-        // 提取盘口数字（支持 .25, .5, .75）
-        const handicapMatch = rec.match(/([+-]?\d+\.?\d*)/);
-        if (!handicapMatch) return null;
-        const handicap = parseFloat(handicapMatch[0]);
-        
-        // 确定推荐方
-        let recommendedTeam = null;
-        for (const team of teams) {
-            if (rec.includes(team)) {
-                recommendedTeam = team;
-                break;
-            }
-        }
-        if (!recommendedTeam) return null;
-        
-        // 计算净胜球（从推荐方角度）
-        const isHome = teams[0] === recommendedTeam;
-        const netGoals = isHome ? homeGoals - awayGoals : awayGoals - homeGoals;
-        
-        // 让球盘结算：净胜球 > 盘口则赢，= 盘口则走水，< 盘口则输
-        const effective = netGoals + handicap; // handicap为负数表示让球
-        
-        if (effective > 0) return 'win';
-        if (effective === 0) return 'push';
-        return 'lose';
-    }
-    
-    // 大小球（篮球大小分 或 足球大小球）
-    if (['overunder', 'ou_football'].includes(record.betType)) {
-        const ouMatch = rec.match(/([大小])\s*(\d+\.?\d*)/);
-        if (!ouMatch) return null;
-        
-        const type = ouMatch[1];
-        const line = parseFloat(ouMatch[2]);
-        const total = homeGoals + awayGoals;
-        
-        if (type === '大') {
-            if (total > line) return 'win';
-            if (total === line) return 'push';
-            return 'lose';
-        } else {
-            if (total < line) return 'win';
-            if (total === line) return 'push';
-            return 'lose';
-        }
-    }
-    
-    // 竞彩（胜平负）
-    if (record.betType === 'lottery') {
-        // 简化处理：推荐包含"主胜"/"客胜"/"平"等关键字
-        const homeWin = homeGoals > awayGoals;
-        const draw = homeGoals === awayGoals;
-        const awayWin = homeGoals < awayGoals;
-        
-        if (rec.includes('主胜') && homeWin) return 'win';
-        if (rec.includes('客胜') && awayWin) return 'win';
-        if (rec.includes('平') && draw) return 'win';
-        if ((rec.includes('主胜') && !homeWin) || (rec.includes('客胜') && !awayWin) || (rec.includes('平') && !draw)) return 'lose';
-        return null;
-    }
-    
-    return null;
+async function ensureAllLoaded() {
+  if (!state.index || state.indexError || state.days.length === 0) return;
+  if (state.days.every((day) => state.loaded.has(day.date))) return;
+  if (state.bulkLoading) return;
+
+  state.bulkLoading = true;
+  render();
+
+  await Promise.all(state.days.map((day) => loadDay(day.date).catch(() => null)));
+
+  state.bulkLoading = false;
+  render();
 }
 
-// ===== 结算弹窗 =====
-function openSettleModal(id) {
-    editingId = id;
-    const a = cloudData.find(x => x.id === id);
-    if (!a) return;
-    
-    document.getElementById('modalMatch').innerHTML = 
-        `${SPORT_MAP[a.sport] || ''} <strong>${a.match}</strong> · ${a.recommendation}`;
-    
-    document.querySelectorAll('.r-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('finalScore').value = a.finalScore || '';
-    document.getElementById('autoResult').style.display = 'none';
-    
-    document.getElementById('settleModal').classList.add('active');
+function applyFilter(filter) {
+  state.filter = filter;
+  for (const button of elements.filterButtons) {
+    const active = button.dataset.filter === filter;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  }
+
+  render();
+  if (isFilterActive()) ensureAllLoaded();
 }
 
-function closeSettleModal() {
-    document.getElementById('settleModal').classList.remove('active');
-    editingId = null;
+function handleSearchInput() {
+  state.query = elements.searchInput.value;
+  render();
+  if (isFilterActive()) ensureAllLoaded();
 }
 
-function performAutoAnalysis() {
-    const a = cloudData.find(x => x.id === editingId);
-    if (!a) return;
-    
-    const score = document.getElementById('finalScore').value.trim();
-    if (!score) {
-        toast('请先输入最终比分');
-        return;
-    }
-    
-    const result = autoAnalyzeResult(a, score);
-    const autoResultDiv = document.getElementById('autoResult');
-    
-    if (result) {
-        // 自动选择对应按钮
-        document.querySelectorAll('.r-btn').forEach(b => b.classList.remove('active'));
-        const targetBtn = document.querySelector(`.r-btn[data-r="${result}"]`);
-        if (targetBtn) targetBtn.classList.add('active');
-        
-        const resultText = result === 'win' ? '✅ 命中' : result === 'push' ? '↩️ 走水' : '❌ 未中';
-        autoResultDiv.innerHTML = `<span style="color:var(--green);font-weight:600;">自动分析结果：${resultText}</span>`;
+function bindEvents() {
+  for (const button of elements.filterButtons) {
+    button.addEventListener('click', () => applyFilter(button.dataset.filter || 'all'));
+  }
+
+  elements.searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(handleSearchInput, 120);
+  });
+
+  elements.searchInput.addEventListener('search', () => {
+    clearTimeout(searchTimer);
+    handleSearchInput();
+  });
+
+  elements.archiveList.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const retry = event.target.closest('[data-retry-date]');
+    if (!retry) return;
+    const date = retry.dataset.retryDate;
+    state.dayErrors.delete(date);
+    loadDay(date).catch(() => {});
+  });
+}
+
+async function init() {
+  bindEvents();
+  render();
+
+  try {
+    const index = await fetchJSON(INDEX_PATH);
+    if (!index || !Array.isArray(index.days)) throw new Error('invalid index payload');
+
+    state.index = index;
+    state.indexError = false;
+    state.days = index.days
+      .filter(
+        (day) =>
+          day &&
+          isValidDateString(day.date) &&
+          typeof day.file === 'string' &&
+          day.file.startsWith('days/') &&
+          Number(day.push_total) > 0
+      )
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    updateLastUpdated(index.generated_at_utc);
+    markSuccess();
+    buildArchive();
+
+    if (state.days.length > 0) {
+      state.expandedDate = state.days[0].date;
+      render();
+      loadDay(state.expandedDate).catch(() => {});
+      if (isFilterActive()) ensureAllLoaded();
     } else {
-        autoResultDiv.innerHTML = `<span style="color:var(--orange);">⚠️ 无法自动分析，请手动选择结果</span>`;
+      state.expandedDate = null;
+      render();
     }
-    autoResultDiv.style.display = 'block';
+  } catch (error) {
+    state.indexError = true;
+    state.index = null;
+    state.days = [];
+    updateLastUpdated('');
+    render();
+  }
 }
 
-async function doSettle() {
-    const active = document.querySelector('.r-btn.active');
-    if (!active) {
-        toast('请选择结果');
-        return;
-    }
-    
-    const result = active.dataset.r;
-    const score = document.getElementById('finalScore').value.trim();
-    
-    const a = cloudData.find(x => x.id === editingId);
-    if (a) {
-        a.result = result;
-        a.finalScore = score || null;
-        await saveToCloud(a);
-        toast(result === 'win' ? '🎉 命中！' : result === 'push' ? '走水' : '未命中');
-    }
-    
-    closeSettleModal();
-}
-
-// ===== 表单 =====
-function initForm() {
-    document.getElementById('matchDate').valueAsDate = new Date();
-    document.getElementById('matchTime').value = '00:00';
-    
-    document.getElementById('analysisForm').onsubmit = async (e) => {
-        e.preventDefault();
-        
-        const league = document.getElementById('league').value.trim();
-        const date = document.getElementById('matchDate').value;
-        const time = document.getElementById('matchTime').value;
-        const match = document.getElementById('matchTeams').value.trim();
-        const betType = document.getElementById('betType').value;
-        const rec = document.getElementById('recommendation').value.trim();
-        const odds = document.getElementById('odds').value.trim();
-        const analysis = document.getElementById('analysisText').value.trim();
-        
-        if (!league || !date || !match || !betType || !rec) {
-            toast('请填写必填项');
-            return;
-        }
-        
-        const dateTime = `${date}T${time || '00:00'}:00`;
-        
-        let sport = 'football';
-        if (['overunder', 'handicap'].includes(betType)) sport = 'basketball';
-        
-        const item = {
-            id: Date.now(),
-            sport,
-            league,
-            date: dateTime,
-            match,
-            betType,
-            recommendation: rec,
-            odds,
-            analysis,
-            result: null,
-            finalScore: null
-        };
-        
-        const ok = await saveToCloud(item);
-        if (ok) {
-            document.getElementById('analysisForm').reset();
-            document.getElementById('matchDate').valueAsDate = new Date();
-            document.getElementById('matchTime').value = '00:00';
-            toast('保存成功');
-        }
-    };
-}
-
-// ===== 筛选 =====
-function initFilters() {
-    document.querySelectorAll('.filter').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.f;
-            renderRecords();
-        };
-    });
-}
-
-// ===== 复制 =====
-function initCopy() {
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.onclick = () => {
-            navigator.clipboard.writeText(btn.dataset.n).then(() => {
-                toast('已复制：' + btn.dataset.n);
-            });
-        };
-    });
-}
-
-// ===== 管理模式 =====
-function setAdminMode(enabled) {
-    isAdmin = enabled;
-    const lockBtn = document.getElementById('lockBtn');
-    const formSection = document.querySelector('#formSection');
-    
-    if (enabled) {
-        lockBtn.textContent = '🔓';
-        lockBtn.classList.add('unlocked');
-        formSection.style.display = 'block';
-        document.getElementById('pwdModal').classList.remove('active');
-    } else {
-        lockBtn.textContent = '🔒';
-        lockBtn.classList.remove('unlocked');
-        formSection.style.display = 'none';
-    }
-    
-    renderRecords();
-}
-
-function initAdminMode() {
-    const lockBtn = document.getElementById('lockBtn');
-    const pwdModal = document.getElementById('pwdModal');
-    const pwdClose = document.getElementById('pwdClose');
-    const pwdSubmit = document.getElementById('pwdSubmit');
-    const pwdInput = document.getElementById('pwdInput');
-    
-    lockBtn.onclick = () => {
-        if (isAdmin) {
-            setAdminMode(false);
-        } else {
-            pwdInput.value = '';
-            pwdModal.classList.add('active');
-            pwdInput.focus();
-        }
-    };
-    
-    pwdClose.onclick = () => pwdModal.classList.remove('active');
-    pwdModal.querySelector('.modal-overlay').onclick = () => pwdModal.classList.remove('active');
-    
-    pwdSubmit.onclick = () => {
-        if (pwdInput.value === PASSWORD) {
-            setAdminMode(true);
-            toast('已解锁管理模式');
-        } else {
-            toast('密码错误');
-            pwdInput.value = '';
-        }
-    };
-    
-    pwdInput.onkeydown = e => {
-        if (e.key === 'Enter') pwdSubmit.click();
-    };
-}
-
-// ===== 初始化 =====
-document.addEventListener('DOMContentLoaded', () => {
-    // 结算弹窗
-    document.getElementById('modalClose').onclick = closeSettleModal;
-    document.getElementById('modalCancel').onclick = closeSettleModal;
-    document.querySelector('#settleModal .modal-overlay').onclick = closeSettleModal;
-    
-    document.querySelectorAll('.r-btn').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.r-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        };
-    });
-    
-    document.getElementById('modalConfirm').onclick = doSettle;
-    document.getElementById('modalAuto').onclick = performAutoAnalysis;
-    
-    // 初始化
-    initForm();
-    initFilters();
-    initCopy();
-    initAdminMode();
-    
-    // 从云端加载数据
-    loadFromCloud();
-});
+init();

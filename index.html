@@ -3,270 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="专业足球篮球赛事分析胜率统计平台">
-    <title>博弈增强型分析 · 胜率统计中心</title>
+    <meta name="description" content="按推送日期归档 V4 滚球提醒，跟踪推送后至终场的进球情况">
+    <title>滚球推送结果统计中心</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=5">
-
-    <!-- Supabase ES Module Import Map -->
-    <script type="importmap">
-    {
-        "imports": {
-            "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
-        }
-    }
-    </script>
+    <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
-    <!-- 顶部导航 -->
-    <nav class="top-nav">
-        <div class="nav-left">
-            <span class="nav-logo">◆</span>
-            <span class="nav-brand">ANALYTICS</span>
+    <header class="site-header">
+        <div class="page-shell header-inner">
+            <div class="header-copy">
+                <p class="eyebrow">V4 LIVE PUSH · RESULTS</p>
+                <h1>滚球推送结果统计中心</h1>
+                <p class="subtitle">按推送日期归档 V4 滚球提醒，跟踪推送后至终场的进球情况</p>
+            </div>
+            <div class="generated">
+                <span class="generated-label">最后成功更新时间</span>
+                <time id="lastUpdated" datetime="">—</time>
+                <span class="generated-zone">北京时间</span>
+            </div>
         </div>
-        <div class="nav-right">
-            <a href="#stats" class="nav-btn">数据</a>
-            <a href="#records" class="nav-btn">记录</a>
-            <a href="#contact" class="nav-btn">联系</a>
-            <button class="nav-lock" id="lockBtn" title="管理模式">🔒</button>
+    </header>
+
+    <main class="page-shell main">
+        <div id="errorBanner" class="error-banner" role="alert" hidden>
+            <strong>数据加载失败，请稍后重试</strong>
+            <span id="lastSuccessAt">上次成功加载：—</span>
         </div>
-    </nav>
 
-    <!-- 主内容 -->
-    <main class="main">
-        <!-- Hero区域 -->
-        <section class="hero">
-            <div class="hero-inner">
-                <p class="hero-label">专业赛事分析平台</p>
-                <h1>胜率统计中心</h1>
-                <div class="systems">
-                    <div class="sys-card">
-                        <div class="sys-icon">⚽</div>
-                        <div class="sys-name">博弈增强型分析模型</div>
-                        <div class="sys-ver">V6.2 博弈大智库</div>
-                        <div class="sys-tags">
-                            <span class="sys-tag g">亚盘</span>
-                            <span class="sys-tag b">竞彩</span>
-                        </div>
-                    </div>
-                    <div class="sys-card">
-                        <div class="sys-icon">🏀</div>
-                        <div class="sys-name">Basketball</div>
-                        <div class="sys-ver">V1.8-beta</div>
-                        <div class="sys-tags">
-                            <span class="sys-tag o">大小分</span>
-                            <span class="sys-tag g">让球</span>
-                        </div>
-                    </div>
-                </div>
+        <section class="section" aria-labelledby="overviewTitle">
+            <div class="section-heading">
+                <h2 id="overviewTitle">数据概览</h2>
+                <p id="loadedNote" class="section-note"></p>
+            </div>
+            <div class="stats-grid">
+                <article class="stat-card">
+                    <div class="stat-num" id="statPushTotal">—</div>
+                    <div class="stat-label">推送总次数</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-num" id="statFormal">—</div>
+                    <div class="stat-label">强提醒</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-num" id="statSoft">—</div>
+                    <div class="stat-label">软提醒</div>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-num" id="statHit">—</div>
+                    <div class="stat-label">推送后产生进球的记录数</div>
+                </article>
+                <article class="stat-card stat-card-accent">
+                    <div class="stat-num" id="statHitRate">—</div>
+                    <div class="stat-label">推送后进球率</div>
+                    <p class="stat-note">仅统计已完场且可核验记录</p>
+                </article>
+                <article class="stat-card">
+                    <div class="stat-num" id="statPending">—</div>
+                    <div class="stat-label">待完场</div>
+                </article>
             </div>
         </section>
 
-        <!-- 统计面板 -->
-        <section class="section" id="stats">
-            <div class="container">
-                <h2 class="section-title">实时数据</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-num" id="totalCount">0</div>
-                        <div class="stat-lbl">总场次</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-num green" id="winCount">0</div>
-                        <div class="stat-lbl">命中</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-num blue" id="winRate">0%</div>
-                        <div class="stat-lbl">胜率</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-num orange" id="streakCount">0</div>
-                        <div class="stat-lbl">连红</div>
-                    </div>
+        <section class="section" aria-labelledby="toolsTitle">
+            <h2 id="toolsTitle" class="sr-only">筛选与搜索</h2>
+            <div class="toolbar">
+                <div class="filter-group" role="group" aria-label="记录筛选">
+                    <button type="button" class="filter-btn is-active" data-filter="all" aria-pressed="true">全部</button>
+                    <button type="button" class="filter-btn" data-filter="formal" aria-pressed="false">强提醒</button>
+                    <button type="button" class="filter-btn" data-filter="soft" aria-pressed="false">软提醒</button>
+                    <button type="button" class="filter-btn" data-filter="prediction" aria-pressed="false">正式预测</button>
+                    <button type="button" class="filter-btn" data-filter="observation" aria-pressed="false">观察记录</button>
+                    <button type="button" class="filter-btn filter-hit" data-filter="hit" aria-pressed="false">命中</button>
+                    <button type="button" class="filter-btn filter-miss" data-filter="miss" aria-pressed="false">未命中</button>
+                    <button type="button" class="filter-btn" data-filter="unsettled" aria-pressed="false">待完场·待核验</button>
                 </div>
-                <div class="cat-row">
-                    <div class="cat-item"><span>⚽ 亚盘</span><b id="fbAsiaRate">--</b></div>
-                    <div class="cat-item"><span>⚽ 大小球</span><b id="fbOuRate">--</b></div>
-                    <div class="cat-item"><span>⚽ 竞彩</span><b id="fbLotteryRate">--</b></div>
-                    <div class="cat-item"><span>🏀 大小分</span><b id="bkOuRate">--</b></div>
-                    <div class="cat-item"><span>🏀 让球</span><b id="bkHandicapRate">--</b></div>
-                </div>
+                <label class="search-box" for="searchInput">
+                    <span class="search-icon" aria-hidden="true"></span>
+                    <input
+                        id="searchInput"
+                        type="search"
+                        placeholder="搜索比赛、联赛或日期（YYYY-MM-DD）"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                </label>
             </div>
         </section>
 
-        <!-- 录入表单（仅管理员可见） -->
-        <section class="section admin-only" id="formSection" style="display:none">
-            <div class="container">
-                <h2 class="section-title">录入赛前分析</h2>
-                <div class="form-wrap">
-                    <form id="analysisForm" class="analysis-form">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>赛事/联赛</label>
-                                <input type="text" id="league" placeholder="如：英超、NBA" required>
-                            </div>
-                            <div class="form-group">
-                                <label>比赛日期</label>
-                                <input type="date" id="matchDate" required>
-                            </div>
-                            <div class="form-group">
-                                <label>开赛时间</label>
-                                <input type="time" id="matchTime" required>
-                            </div>
-                        </div>
-                        <div class="form-group full">
-                            <label>对阵双方</label>
-                            <input type="text" id="matchTeams" placeholder="如：曼联 vs 利物浦" required>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>推荐类型</label>
-                                <select id="betType" required>
-                                    <option value="">选择类型</option>
-                                    <optgroup label="⚽ 足球">
-                                        <option value="asia">亚盘推荐</option>
-                                        <option value="ou_football">大小球推荐</option>
-                                        <option value="lottery">竞彩推荐</option>
-                                    </optgroup>
-                                    <optgroup label="🏀 篮球">
-                                        <option value="overunder">大小分推荐</option>
-                                        <option value="handicap">让球推荐</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>具体推荐</label>
-                                <input type="text" id="recommendation" placeholder="如：曼联-0.5" required>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>参考赔率</label>
-                                <input type="text" id="odds" placeholder="如：0.95">
-                            </div>
-                            <div class="form-group">
-                                <label>分析说明</label>
-                                <input type="text" id="analysisText" placeholder="简要分析依据">
-                            </div>
-                        </div>
-                        <button type="submit" class="submit-btn">保存分析</button>
-                    </form>
-                </div>
+        <section class="section" aria-labelledby="archiveTitle">
+            <div class="section-heading">
+                <h2 id="archiveTitle">按日期归档</h2>
+                <p class="section-note">按北京时间归档，点击日期展开当日推送明细</p>
             </div>
-        </section>
-
-        <!-- 历史记录 -->
-        <section class="section" id="records">
-            <div class="container">
-                <h2 class="section-title">分析记录</h2>
-                <div class="filter-row">
-                    <button class="filter active" data-f="all">全部</button>
-                    <button class="filter" data-f="football">⚽ 足球</button>
-                    <button class="filter" data-f="basketball">🏀 篮球</button>
-                    <button class="filter" data-f="pending">⏳ 待结算</button>
-                    <button class="filter" data-f="win">✅ 命中</button>
-                    <button class="filter" data-f="lose">❌ 未中</button>
-                </div>
-                <div class="records">
-                    <div class="rec-group">
-                        <div class="rec-title"><span class="dot orange"></span>待结算 (<b id="pendingCount">0</b>)</div>
-                        <div id="pendingList"></div>
-                    </div>
-                    <div class="rec-group">
-                        <div class="rec-title"><span class="dot green"></span>已结算 (<b id="finishedCount">0</b>)</div>
-                        <div id="finishedList"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 联系方式 -->
-        <section class="section" id="contact">
-            <div class="container">
-                <h2 class="section-title">联系方式</h2>
-                <div class="contact-grid">
-                    <div class="contact-card">
-                        <div class="contact-icon">💬</div>
-                        <h3>微信</h3>
-                        <div class="qr-box">
-                            <img src="wechat-qr.jpg" alt="微信">
-                        </div>
-                        <p class="contact-hint">扫码添加微信</p>
-                    </div>
-                    <div class="contact-card">
-                        <div class="contact-icon">🐧</div>
-                        <h3>QQ</h3>
-                        <div class="qq-num">657564332</div>
-                        <button class="copy-btn" data-n="657564332">复制号码</button>
-                        <p class="contact-hint">点击复制</p>
-                    </div>
-                </div>
+            <div id="archiveList" class="archive-list"></div>
+            <div id="emptyState" class="empty-state" hidden>
+                <p id="emptyStateText">当前筛选条件下没有记录</p>
             </div>
         </section>
     </main>
 
-    <!-- 页脚免责声明 -->
-    <footer>
-        <div style="font-size:12px; color:#666; border-top:1px solid #ddd; padding:12px; text-align:center; line-height:1.5;">
-            <p><strong>免责声明</strong><br>
-            本网页所有赛事分析、数据及内容仅供体育赛事交流与研究使用，<strong>不构成任何投注建议、交易依据或诱导行为</strong>。
-            用户据此做出的任何决策均系其<strong>独立判断，风险自行承担</strong>，本网页不承担任何直接或间接责任。<br>
-            <strong style="color:#cc0000;">严禁将本网页内容用于赌博或任何违法活动。</strong> 请遵守所在地法律法规，理性观赛。
+    <footer class="site-footer">
+        <div class="page-shell footer-inner">
+            <p>
+                <strong>免责声明</strong><br>
+                本网页所有赛事分析、数据及内容仅供体育赛事交流与研究使用，<strong>不构成任何投注建议、交易依据或诱导行为</strong>。
+                用户据此做出的任何决策均系其<strong>独立判断，风险自行承担</strong>，本网页不承担任何直接或间接责任。<br>
+                <strong class="disclaimer-warning">严禁将本网页内容用于赌博或任何违法活动。</strong> 请遵守所在地法律法规，理性观赛。
             </p>
         </div>
     </footer>
 
-    <!-- 结算弹窗 -->
-    <div class="modal" id="settleModal">
-        <div class="modal-overlay"></div>
-        <div class="modal-box">
-            <div class="modal-head">
-                <h3>录入结果</h3>
-                <button class="modal-x" id="modalClose">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="match-info" id="modalMatch"></div>
-                <div class="result-btns">
-                    <button class="r-btn win" data-r="win"><span>✅</span>命中</button>
-                    <button class="r-btn lose" data-r="lose"><span>❌</span>未中</button>
-                    <button class="r-btn push" data-r="push"><span>↩️</span>走水</button>
-                </div>
-                <div class="form-group">
-                    <label>最终比分</label>
-                    <input type="text" id="finalScore" placeholder="如：2:1">
-                </div>
-                <button type="button" class="btn-auto" id="modalAuto" style="width:100%;padding:10px;margin-top:8px;font-size:13px;font-weight:600;color:var(--blue);background:#e3f2fd;border:none;border-radius:8px;cursor:pointer;">🤖 自动分析</button>
-                <div id="autoResult" style="margin-top:8px;font-size:13px;text-align:center;display:none;"></div>
-            </div>
-            <div class="modal-foot">
-                <button class="btn-cancel" id="modalCancel">取消</button>
-                <button class="btn-confirm" id="modalConfirm">确认</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 密码弹窗 -->
-    <div class="modal" id="pwdModal">
-        <div class="modal-overlay"></div>
-        <div class="modal-box pwd-box">
-            <div class="modal-head">
-                <h3>管理模式</h3>
-                <button class="modal-x" id="pwdClose">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="pwd-tip">输入密码解锁管理功能</p>
-                <input type="password" id="pwdInput" class="pwd-input" placeholder="请输入密码">
-                <button class="submit-btn" id="pwdSubmit">解锁</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast -->
-    <div class="toast" id="toast"></div>
-
-    <!-- 应用逻辑 (ES Module) -->
-    <script type="module" src="script.js?v=7"></script>
+    <script type="module" src="script.js?v=8"></script>
 </body>
 </html>
