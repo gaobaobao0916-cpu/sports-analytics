@@ -13,6 +13,7 @@ const INDEX_PATH = 'data/live-results/index.json';
 const LAST_SUCCESS_KEY = 'liveResultsLastSuccessAt';
 
 const TABLE_COLUMNS = [
+  { label: '进球结果', className: 'col-result' },
   { label: '推送时间', className: 'col-time' },
   { label: '级别' },
   { label: '类型', className: 'col-type' },
@@ -26,7 +27,6 @@ const TABLE_COLUMNS = [
   { label: '内容性质', className: 'col-class' },
   { label: '全场总进球', className: 'col-goals num' },
   { label: '推送后新增进球', className: 'col-goals num' },
-  { label: '进球结果', className: 'col-result' },
 ];
 
 const HTML_ESCAPES = {
@@ -385,6 +385,7 @@ function rowHTML(record) {
 
   return `
     <tr>
+      <td class="result-cell">${resultCellHTML(vm)}</td>
       <td class="col-time">${escapeHtml(vm.pushTime)}</td>
       <td><span class="level-badge level-${escapeHtml(vm.levelKey)}">${escapeHtml(vm.level)}</span></td>
       <td><span class="market-type">${escapeHtml(vm.type)}</span></td>
@@ -398,7 +399,6 @@ function rowHTML(record) {
       <td class="col-class">${escapeHtml(vm.recordClass)}</td>
       <td class="col-goals num">${escapeHtml(vm.fullTimeGoals)}</td>
       <td class="col-goals num">${escapeHtml(vm.goalsAfterPush)}</td>
-      <td class="result-cell">${resultCellHTML(vm)}</td>
     </tr>
   `;
 }

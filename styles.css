@@ -604,9 +604,24 @@ h1 {
     min-width: 86px;
 }
 
-.records-table .col-result {
+.records-table .col-result,
+.records-table .result-cell {
+    position: sticky;
+    left: 0;
+    z-index: 3;
     min-width: 112px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
     text-align: center;
+}
+
+.records-table th.col-result {
+    z-index: 4;
+    background: var(--surface-tint);
+}
+
+.records-table tbody tr:hover .result-cell {
+    background: #fbfcfd;
 }
 
 .muted {
@@ -752,6 +767,37 @@ h1 {
 .footer-inner {
     padding: 26px 0 32px;
     text-align: center;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.footer-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 9px 16px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+    border-radius: 8px;
+    color: #1450a8;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible {
+    background: #dbeafe;
+    border-color: #93b4e4;
+    text-decoration: underline;
 }
 
 .footer-inner p {
