@@ -84,25 +84,26 @@ git clone https://github.com/gaobaobao0916-cpu/sports-analytics.git e:\V4\v4\spo
 gh auth status
 
 $repo = 'e:\V4\v4\sports-analytics-bot'
-$scheduler = Join-Path $repo 'tools\live_results_scheduler.ps1'
+$launcher = 'e:\V4\v4\live-results-work\launch_scheduler_hidden.vbs'
 $startup = [Environment]::GetFolderPath('Startup')
 $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut(
   (Join-Path $startup 'LiveOU Live Results Scheduler.lnk')
 )
-$shortcut.TargetPath = "$PSHOME\powershell.exe"
-$shortcut.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scheduler`""
-$shortcut.WorkingDirectory = $repo
+$shortcut.TargetPath = "$env:SystemRoot\System32\wscript.exe"
+$shortcut.Arguments = "`"$launcher`""
+$shortcut.WorkingDirectory = 'e:\V4\v4\live-results-work'
 $shortcut.Save()
 ```
 
+启动项指向 `launch_scheduler_hidden.vbs`，由它以完全隐藏窗口方式拉起 `tools/live_results_scheduler.ps1`；不要改为直接启动 `powershell.exe`，否则桌面会出现常驻黑窗口。直接关闭该窗口会终止调度器，导致下一次定时运行丢失。
+
 调度器在当前用户登录时由启动项加载，每天北京时间 08:00、20:00 运行；电脑进入睡眠而错过时间时，会在唤醒后补跑。电脑未开机或用户未登录时不运行，无需管理员权限。
 
-本次立即启动并完整试跑一次：
+需要立即试跑时，用隐藏启动器拉起一次即可，跑完自动回到等待状态：
 
 ```powershell
-$command = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scheduler`" -RunNow"
-$result = ([WmiClass]'Win32_Process').Create($command)
-$result.ProcessId
+& "$env:SystemRoot\System32\wscript.exe" $launcher
+Get-Content e:\V4\v4\live-results-work\logs\scheduler.log -Tail 5
 ```
 
 日常检查：
