@@ -36,6 +36,30 @@ function Invoke-Checked {
     }
 }
 
+function Invoke-NetworkChecked {
+    # 访问 GitHub 的操作允许重试，避免一次连接重置就放弃整个档期。
+    param(
+        [string]$FilePath,
+        [string[]]$CommandArgs
+    )
+    $RetryDelays = @(0, 20, 60)
+    for ($Attempt = 0; $Attempt -lt $RetryDelays.Count; $Attempt++) {
+        if ($Attempt -gt 0) {
+            Write-Log "$($RetryDelays[$Attempt]) 秒后进行第 $($Attempt + 1) 次尝试：$FilePath $($CommandArgs -join ' ')"
+            Start-Sleep -Seconds $RetryDelays[$Attempt]
+        }
+        try {
+            Invoke-Checked -FilePath $FilePath -CommandArgs $CommandArgs
+            return
+        } catch {
+            if ($Attempt -eq $RetryDelays.Count - 1) {
+                throw
+            }
+            Write-Log "网络操作失败：$($_.Exception.Message)"
+        }
+    }
+}
+
 try {
     if (-not $Mutex.WaitOne(0)) {
         Write-Log '已有自动发布任务正在运行，本次跳过。'
@@ -53,9 +77,9 @@ try {
             throw '自动发布工作区不干净，为避免覆盖改动已停止。请先检查 bot 克隆。'
         }
 
-        Invoke-Checked git @('fetch', 'origin', '--prune')
+        Invoke-NetworkChecked git @('fetch', 'origin', '--prune')
         Invoke-Checked git @('switch', 'master')
-        Invoke-Checked git @('pull', '--ff-only', 'origin', 'master')
+        Invoke-NetworkChecked git @('pull', '--ff-only', 'origin', 'master')
         Invoke-Checked git @('switch', '-c', $Branch)
 
         # 导出器仅以 SQLite mode=ro 读取生产归档库，并自动补足 7M 终场。
@@ -80,7 +104,7 @@ try {
             $env:GIT_COMMITTER_NAME = '随心笔记'
             $env:GIT_COMMITTER_EMAIL = 'gaobaobao0916@gmail.com'
             Invoke-Checked git @('commit', '-m', "chore: update live push results $TaskDate")
-            Invoke-Checked git @('push', '-u', 'origin', $Branch)
+            Invoke-NetworkChecked git @('push', '-u', 'origin', $Branch)
 
             $PrBody = @'
 ## Summary
@@ -92,14 +116,14 @@ try {
 - [x] `python tools\export_live_results.py`
 - [x] `node --test tests\`
 '@
-            Invoke-Checked gh @(
+            Invoke-NetworkChecked gh @(
                 'pr', 'create', '--base', 'master', '--head', $Branch,
                 '--title', "chore: update live push results $TaskDate",
                 '--body', $PrBody
             )
-            Invoke-Checked gh @('pr', 'merge', $Branch, '--squash', '--delete-branch')
+            Invoke-NetworkChecked gh @('pr', 'merge', $Branch, '--squash', '--delete-branch')
             Invoke-Checked git @('switch', 'master')
-            Invoke-Checked git @('pull', '--ff-only', 'origin', 'master')
+            Invoke-NetworkChecked git @('pull', '--ff-only', 'origin', 'master')
             Write-Log '自动 PR 已合并，GitHub Pages 将发布最新归档。'
         }
         Write-Log '本次自动更新完成。'
