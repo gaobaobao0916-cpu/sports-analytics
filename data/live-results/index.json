@@ -1,18 +1,31 @@
 {
   "schema_version": "live-results-index-1",
   "timezone": "Asia/Shanghai",
-  "generated_at_utc": "2026-11-20T00:00:07.889990+00:00",
+  "generated_at_utc": "2026-11-21T00:17:05.041163+00:00",
   "days": [
     {
-      "date": "2026-11-20",
-      "file": "days/2026-11-20.json",
+      "date": "2026-11-21",
+      "file": "days/2026-11-21.json",
       "push_total": 1,
-      "formal": 1,
-      "soft": 0,
+      "formal": 0,
+      "soft": 1,
       "settled": 0,
       "hit": 0,
       "miss": 0,
       "pending": 1,
+      "review": 0,
+      "abnormal": 0
+    },
+    {
+      "date": "2026-11-20",
+      "file": "days/2026-11-20.json",
+      "push_total": 3,
+      "formal": 1,
+      "soft": 2,
+      "settled": 3,
+      "hit": 3,
+      "miss": 0,
+      "pending": 0,
       "review": 0,
       "abnormal": 0
     },
