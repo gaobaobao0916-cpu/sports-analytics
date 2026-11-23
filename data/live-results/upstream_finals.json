@@ -1,6 +1,6 @@
 {
   "schema_version": "live-results-upstream-1",
-  "generated_at_utc": "2026-11-23T00:00:07.443809+00:00",
+  "generated_at_utc": "2026-11-23T12:00:22.202638+00:00",
   "matches": {
     "7m:5006543": {
       "match_id": "7m:5006543",
@@ -1409,8 +1409,8 @@
     "7m:5006552": {
       "match_id": "7m:5006552",
       "native_id": 5006552,
-      "state": 3,
-      "final": false,
+      "state": 4,
+      "final": true,
       "home_team": "Red Bull Bragantino",
       "away_team": "Vasco da Gama",
       "kickoff_utc": "2026-11-22T22:30:00+00:00",
@@ -1418,11 +1418,47 @@
       "final_away_score": 0,
       "half_time_home_score": 0,
       "half_time_away_score": 0,
-      "fetched_at_utc": "2026-11-23T00:00:04.587920+00:00",
+      "fetched_at_utc": "2026-11-23T12:00:16.250855+00:00",
       "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5006552",
-      "response_sha256": "7b8ecfd2160e1a2d343f16a4689f57dacf8b8e50db017290657e998ee29f62d7",
-      "response_bytes": 295,
-      "note": "UPSTREAM_NOT_FINAL"
+      "response_sha256": "ae0db8a08518b2da373d55b6e20b4ef750f827a2943ce75b48c2ec166e58bc09",
+      "response_bytes": 291,
+      "note": null
+    },
+    "7m:5077407": {
+      "match_id": "7m:5077407",
+      "native_id": 5077407,
+      "state": 4,
+      "final": true,
+      "home_team": "C.D. Guadalajara",
+      "away_team": "Cruz Azul",
+      "kickoff_utc": "2026-11-22T23:07:00+00:00",
+      "final_home_score": 1,
+      "final_away_score": 0,
+      "half_time_home_score": 1,
+      "half_time_away_score": 0,
+      "fetched_at_utc": "2026-11-23T12:00:19.253897+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5077407",
+      "response_sha256": "c0a2cb75b3707f525a6bb50f30f56cc56527df14d92c554ef66bce1d1c047bb5",
+      "response_bytes": 252,
+      "note": null
+    },
+    "7m:5190515": {
+      "match_id": "7m:5190515",
+      "native_id": 5190515,
+      "state": 4,
+      "final": true,
+      "home_team": "C.D. San Antonio Bulo Bulo",
+      "away_team": "Club Always Ready",
+      "kickoff_utc": "2026-11-22T23:30:00+00:00",
+      "final_home_score": 0,
+      "final_away_score": 3,
+      "half_time_home_score": 0,
+      "half_time_away_score": 1,
+      "fetched_at_utc": "2026-11-23T12:00:21.763668+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5190515",
+      "response_sha256": "edb4a1ea7667e12090f6c61b6d2dec73bcdbe1f16aec40ae9872fd2c8ed95f03",
+      "response_bytes": 311,
+      "note": null
     }
   },
   "source": {
