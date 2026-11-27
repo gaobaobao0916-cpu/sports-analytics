@@ -1,6 +1,6 @@
 {
   "schema_version": "live-results-upstream-1",
-  "generated_at_utc": "2026-11-25T00:00:13.051518+00:00",
+  "generated_at_utc": "2026-11-27T12:12:49.341428+00:00",
   "matches": {
     "7m:5006543": {
       "match_id": "7m:5006543",
@@ -1656,6 +1656,24 @@
       "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5006560",
       "response_sha256": "13aa3f50d3de4ef68df0917646ae3ac68aba9dd44da7fa9786a315abb63f5e82",
       "response_bytes": 309,
+      "note": null
+    },
+    "7m:5199242": {
+      "match_id": "7m:5199242",
+      "native_id": 5199242,
+      "state": 4,
+      "final": true,
+      "home_team": "Montevideo City Torque",
+      "away_team": "Club Nacional de Football",
+      "kickoff_utc": "2026-11-27T00:30:00+00:00",
+      "final_home_score": 0,
+      "final_away_score": 1,
+      "half_time_home_score": 0,
+      "half_time_away_score": 0,
+      "fetched_at_utc": "2026-11-27T12:12:42.819931+00:00",
+      "source_url": "https://api-en-vpgl.7mdt.com/api/match/version/1_0/footballMatch/matchInfo?langNumber=3&platform=4&portType=1&sportType=1&matchId=5199242",
+      "response_sha256": "53d0af1486c58cd8170925597c41fbf2d904b98c3d37b6e60a2dbb338fb10752",
+      "response_bytes": 298,
       "note": null
     }
   },
