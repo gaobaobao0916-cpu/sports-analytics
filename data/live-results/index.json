@@ -1,18 +1,18 @@
 {
   "schema_version": "live-results-index-1",
   "timezone": "Asia/Shanghai",
-  "generated_at_utc": "2026-11-27T12:12:49.341428+00:00",
+  "generated_at_utc": "2026-11-28T00:26:48.714683+00:00",
   "days": [
     {
       "date": "2026-11-27",
       "file": "days/2026-11-27.json",
-      "push_total": 3,
-      "formal": 2,
-      "soft": 1,
-      "settled": 1,
-      "hit": 1,
-      "miss": 0,
-      "pending": 2,
+      "push_total": 7,
+      "formal": 4,
+      "soft": 3,
+      "settled": 7,
+      "hit": 5,
+      "miss": 2,
+      "pending": 0,
       "review": 0,
       "abnormal": 0
     },
